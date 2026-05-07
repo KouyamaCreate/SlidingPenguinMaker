@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Main/Scenes/Result.unity
     guid: 51bf770b8ce6640489a2a6ccb5298c6d
+  - enabled: 1
+    path: Assets/Main/Scenes/StageMaker.unity
+    guid: 7a1b3c5d00200000000000000000aaaa
   m_configObjects: {}

@@ -2,10 +2,10 @@ using UnityEngine;
 
 public class PlayerGroundChecker : MonoBehaviour
 {
-    [Tooltip("‹ó’†‚Éo‚Ä‚©‚ç‚àÚ’nˆµ‚¢‚ğ‘±‚¯‚é—P—\i•bj")]
+    [Tooltip("ç©ºä¸­ã«å‡ºã¦ã‹ã‚‰ã‚‚æ¥åœ°æ‰±ã„ã‚’ç¶šã‘ã‚‹çŒ¶äºˆï¼ˆç§’ï¼‰")]
     private float coyoteTime = 0.1f;
 
-    [Tooltip("Ú’n‚Æ‚İ‚È‚·ƒŒƒCƒ„[i’n–ÊEˆÚ“®°‚È‚Çj")]
+    [Tooltip("æ¥åœ°ã¨ã¿ãªã™ãƒ¬ã‚¤ãƒ¤ãƒ¼ï¼ˆåœ°é¢ãƒ»ç§»å‹•åºŠãªã©ï¼‰")]
     private LayerMask groundMask;
 
     private float probeThickness = 0.04f;
@@ -28,24 +28,24 @@ public class PlayerGroundChecker : MonoBehaviour
 
     public void UpdateGroundedState(BoxCollider boxCollider)
     {
-        // Ú’n”»’è‚ÌXV
+        // æ¥åœ°åˆ¤å®šã®æ›´æ–°
         bool isGrounded = CheckGroundedWithThinBox(boxCollider);
         if (isGrounded)
         {
-            // Ú’n’†‚Í—P—\ŠÔ‚ğƒŠƒZƒbƒg
+            // æ¥åœ°ä¸­ã¯çŒ¶äºˆæ™‚é–“ã‚’ãƒªã‚»ãƒƒãƒˆ
             timer = coyoteTime;
         }
         else
         {
-            // ”ñÚ’n’†‚Í—P—\ŠÔ‚ğŒ¸­
+            // éæ¥åœ°ä¸­ã¯çŒ¶äºˆæ™‚é–“ã‚’æ¸›å°‘
             timer -= Time.fixedDeltaTime;
         }
     }
 
     public bool CheckGroundedWithThinBox(BoxCollider boxCollider)
     {
-        // BoxCollider ‚Ìƒ[ƒ‹ƒh’†S‚Æ”¼Œai”¼ƒTƒCƒYj‚ğæ“¾
-        // ’ˆÓFBoxCollider.size ‚Íƒ[ƒJƒ‹’lBlossyScale ‚ğŠ|‚¯‚Äƒ[ƒ‹ƒh‰»‚µ‚Ü‚·B
+        // BoxCollider ã®ãƒ¯ãƒ¼ãƒ«ãƒ‰ä¸­å¿ƒã¨åŠå¾„ï¼ˆåŠã‚µã‚¤ã‚ºï¼‰ã‚’å–å¾—
+        // æ³¨æ„ï¼šBoxCollider.size ã¯ãƒ­ãƒ¼ã‚«ãƒ«å€¤ã€‚lossyScale ã‚’æ›ã‘ã¦ãƒ¯ãƒ¼ãƒ«ãƒ‰åŒ–ã—ã¾ã™ã€‚
         Vector3 worldCenter = transform.TransformPoint(boxCollider.center);
 
         Vector3 lossy = transform.lossyScale;
@@ -55,7 +55,7 @@ public class PlayerGroundChecker : MonoBehaviour
 
         Vector3 half = Vector3.Scale(boxCollider.size * 0.5f, lossy);
 
-        // g”–‚¢” h‚Ì”¼ƒTƒCƒY‚ğì‚éiY‚¾‚¯‹É”–j
+        // â€œè–„ã„ç®±â€ã®åŠã‚µã‚¤ã‚ºã‚’ä½œã‚‹ï¼ˆYã ã‘æ¥µè–„ï¼‰
         float halfYProbe = Mathf.Max(0.001f, probeThickness * 0.5f);
         Vector3 halfProbe = new Vector3(
             Mathf.Max(0.001f, half.x - lateralMargin),
@@ -63,14 +63,14 @@ public class PlayerGroundChecker : MonoBehaviour
             Mathf.Max(0.001f, half.z - lateralMargin)
         );
 
-        // ”–‚¢” ‚Ì’†SF’ê–Ê‚©‚ç halfYProbe ‚¾‚¯‰ºiƒLƒƒƒ‰‚Ì up •ûŒü‚ğŠî€j
+        // è–„ã„ç®±ã®ä¸­å¿ƒï¼šåº•é¢ã‹ã‚‰ halfYProbe ã ã‘ä¸‹ï¼ˆã‚­ãƒ£ãƒ©ã® up æ–¹å‘ã‚’åŸºæº–ï¼‰
         Vector3 up = transform.up;
         Vector3 probeCenter = worldCenter - up * (half.y - halfYProbe/2f);
 
-        // ‰ñ“]‚ÍƒIƒuƒWƒFƒNƒg‚Ì‰ñ“]‚ğg—piŒX‚«‘Î‰j
+        // å›è»¢ã¯ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®å›è»¢ã‚’ä½¿ç”¨ï¼ˆå‚¾ãå¯¾å¿œï¼‰
         Quaternion rot = transform.rotation;
 
-        // ƒgƒŠƒK[‚Í–³‹
+        // ãƒˆãƒªã‚¬ãƒ¼ã¯ç„¡è¦–
         return Physics.CheckBox(
             probeCenter, halfProbe, rot, groundMask, QueryTriggerInteraction.Ignore
         );
@@ -100,9 +100,9 @@ public class PlayerGroundChecker : MonoBehaviour
         Vector3 probeCenter = worldCenter - up * (half.y - halfYProbe/2f);
         Quaternion rot = transform.rotation;
 
-        // ‰Â‹‰»F”–‚¢” 
+        // å¯è¦–åŒ–ï¼šè–„ã„ç®±
         Gizmos.color = coyoteTime < 0f ? Color.green : Color.red;
-        // Box ‚ğƒƒCƒ„[‚Å•`‚­iŠÈˆÕF‰ñ“]‘Î‰‚ÌƒƒCƒ„[•`‰æj
+        // Box ã‚’ãƒ¯ã‚¤ãƒ¤ãƒ¼ã§æãï¼ˆç°¡æ˜“ï¼šå›è»¢å¯¾å¿œã®ãƒ¯ã‚¤ãƒ¤ãƒ¼æç”»ï¼‰
         Matrix4x4 prev = Gizmos.matrix;
         Gizmos.matrix = Matrix4x4.TRS(probeCenter, rot, Vector3.one);
         Gizmos.DrawWireCube(Vector3.zero, halfProbe * 2f);

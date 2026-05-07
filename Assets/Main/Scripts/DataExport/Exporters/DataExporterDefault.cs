@@ -4,11 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using StageMaker;
 using UnityEngine;
 
 /// <summary>
-/// •W€“I‚Èƒvƒ‰ƒbƒgƒtƒH[ƒ€iPC/Mobile/Consolej—p‚ÌƒGƒNƒXƒ|[ƒgÀ‘•B
-/// Task.Run ‚ğg—p‚µ‚Ä•ÊƒXƒŒƒbƒh‚Åˆ—‚ğs‚¢AƒƒCƒ“ƒXƒŒƒbƒh‚ÌƒtƒŠ[ƒY‚ğ‰ñ”ğ‚·‚éB
+/// ï¿½Wï¿½ï¿½ï¿½Iï¿½Èƒvï¿½ï¿½ï¿½bï¿½gï¿½tï¿½Hï¿½[ï¿½ï¿½ï¿½iPC/Mobile/Consoleï¿½jï¿½pï¿½ÌƒGï¿½Nï¿½Xï¿½|ï¿½[ï¿½gï¿½ï¿½ï¿½ï¿½ï¿½B
+/// Task.Run ï¿½ï¿½ï¿½gï¿½pï¿½ï¿½ï¿½Ä•ÊƒXï¿½ï¿½ï¿½bï¿½hï¿½Åï¿½ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½Xï¿½ï¿½ï¿½bï¿½hï¿½Ìƒtï¿½ï¿½ï¿½[ï¿½Yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B
 /// </summary>
 public static class DataExporterDefault
 {
@@ -17,10 +18,10 @@ public static class DataExporterDefault
         IReadOnlyList<(int s0, int s1, int p0, int p1)> trials,
         string baseDirName, Action onComplete)
     {
-        // •Û‘¶æƒpƒX‚Ìæ“¾‚ÍƒƒCƒ“ƒXƒŒƒbƒh‚Ås‚¤•K—v‚ª‚ ‚é
+        // ï¿½Û‘ï¿½ï¿½ï¿½pï¿½Xï¿½Ìæ“¾ï¿½Íƒï¿½ï¿½Cï¿½ï¿½ï¿½Xï¿½ï¿½ï¿½bï¿½hï¿½Åsï¿½ï¿½ï¿½Kï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         string savePathBase = Application.persistentDataPath;
 
-        // d‚¢ˆ—‚ğ•ÊƒXƒŒƒbƒh‚ÅÀs
+        // ï¿½dï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÊƒXï¿½ï¿½ï¿½bï¿½hï¿½Åï¿½ï¿½s
         Task.Run(() =>
         {
             try
@@ -33,7 +34,7 @@ public static class DataExporterDefault
             }
         }).ContinueWith(t =>
         {
-            // ˆ—Š®—¹ŒãAƒƒCƒ“ƒXƒŒƒbƒh‚ÅƒR[ƒ‹ƒoƒbƒN‚ğÀs
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½Xï¿½ï¿½ï¿½bï¿½hï¿½ÅƒRï¿½[ï¿½ï¿½ï¿½oï¿½bï¿½Nï¿½ï¿½ï¿½ï¿½ï¿½s
             onComplete?.Invoke();
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
@@ -46,17 +47,17 @@ public static class DataExporterDefault
         var files = new List<DataExporter.FileInMemory>();
         var allSnapshotRows = new List<object[]>();
 
-        // Snapshotƒwƒbƒ_€”õ
+        // Snapshotï¿½wï¿½bï¿½_ï¿½ï¿½ï¿½ï¿½
         var rawSnapshotHeader = new List<string> { "trial_index" };
         if (snapshotCache.Header != null) { rawSnapshotHeader.AddRange(snapshotCache.Header); }
 
-        // s‚²‚Æ‚Ìƒ‹[ƒv
+        // ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Æ‚Ìƒï¿½ï¿½[ï¿½v
         for (int i = 0; i < trials.Count; i++)
         {
             var (s0, s1, p0, p1) = trials[i];
             int trialId = i + 1;
 
-            // Streamƒf[ƒ^ˆ—
+            // Streamï¿½fï¿½[ï¿½^ï¿½ï¿½ï¿½ï¿½
             if (s1 > s0)
             {
                 var (header, rows) = CsvGenerator.SliceCache(streamCache, s0, s1);
@@ -68,14 +69,14 @@ public static class DataExporterDefault
                 }
             }
 
-            // Snapshotƒf[ƒ^’~Ï
+            // Snapshotï¿½fï¿½[ï¿½^ï¿½~ï¿½ï¿½
             if (p1 > p0)
             {
                 CsvGenerator.AccumulateSnapshotRows(snapshotCache, p0, p1, trialId, allSnapshotRows);
             }
         }
 
-        // ’~Ï‚µ‚½Snapshot‚ğˆêŠ‡o—Í
+        // ï¿½~ï¿½Ï‚ï¿½ï¿½ï¿½Snapshotï¿½ï¿½ï¿½êŠ‡ï¿½oï¿½ï¿½
         if (allSnapshotRows.Count > 0)
         {
             var (finalHeader, finalRows) = CsvGenerator.FilterActiveColumns(rawSnapshotHeader, allSnapshotRows);
@@ -84,7 +85,22 @@ public static class DataExporterDefault
             files.Add(new DataExporter.FileInMemory { Path = path, Content = content });
         }
 
-        // ƒtƒ@ƒCƒ‹‘‚«o‚µiIOˆ—j
+        // ã‚¹ãƒ†ãƒ¼ã‚¸æƒ…å ± (stage.json) ã‚’ä½µå‡ºåŠ›
+        try
+        {
+            byte[] stageJson = StageInfoExporter.BuildJsonBytes();
+            files.Add(new DataExporter.FileInMemory
+            {
+                Path = $"{baseDirName}/{StageInfoExporter.FileName}",
+                Content = stageJson,
+            });
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[DataExporterDefault] stage.json export failed: {ex.Message}");
+        }
+
+        // ãƒ•ã‚¡ã‚¤ãƒ«æ›¸ãå‡ºã— (IOå‡¦ç†)
         foreach (var file in files)
         {
             string fullPath = Path.Combine(savePathBase, file.Path);

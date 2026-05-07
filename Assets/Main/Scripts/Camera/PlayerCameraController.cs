@@ -43,7 +43,7 @@ public class PlayerCameraController : MonoBehaviour
 
     void LateUpdate()
     {
-        // ƒƒ\ƒbƒh‰»‚·‚é
+        // ï¿½ï¿½ï¿½\ï¿½bï¿½hï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (target == null) { return; }
 
         // 1. Smooth follow
@@ -55,7 +55,7 @@ public class PlayerCameraController : MonoBehaviour
         // 2. Dynamic zoom based on speed
         if (targetRigidbody != null)
         {
-            float speed = targetRigidbody.velocity.magnitude;
+            float speed = targetRigidbody.linearVelocity.magnitude;
             float t = Mathf.Clamp01(speed / maxSpeedForZoom);
             float targetFOV = Mathf.Lerp(minFOV, maxFOV, t);
             _camera.fieldOfView = Mathf.Lerp(_camera.fieldOfView, targetFOV, Time.deltaTime * fovSmoothSpeed);

@@ -7,15 +7,16 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using StageMaker;
 using UnityEngine;
 
 /// <summary>
-/// WebGL—p‚ÌƒGƒNƒXƒ|[ƒgÀ‘•B
-/// ƒRƒ‹[ƒ`ƒ“‚ğg—p‚µ‚ÄƒƒCƒ“ƒXƒŒƒbƒh‚Å•ªŠ„ˆ—‚ğs‚¢Aƒuƒ‰ƒEƒU‚ÌƒtƒŠ[ƒY‚ğŒyŒ¸‚·‚éB
+/// WebGLï¿½pï¿½ÌƒGï¿½Nï¿½Xï¿½|ï¿½[ï¿½gï¿½ï¿½ï¿½ï¿½ï¿½B
+/// ï¿½Rï¿½ï¿½ï¿½[ï¿½`ï¿½ï¿½ï¿½ï¿½ï¿½gï¿½pï¿½ï¿½ï¿½Äƒï¿½ï¿½Cï¿½ï¿½ï¿½Xï¿½ï¿½ï¿½bï¿½hï¿½Åï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Aï¿½uï¿½ï¿½ï¿½Eï¿½Uï¿½Ìƒtï¿½ï¿½ï¿½[ï¿½Yï¿½ï¿½ï¿½yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B
 /// </summary>
 public static class DataExporterWebGL
 {
-    // jslibƒvƒ‰ƒOƒCƒ“‘¤‚ÌŠÖ”’è‹`
+    // jslibï¿½vï¿½ï¿½ï¿½Oï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ÌŠÖï¿½ï¿½ï¿½`
     [DllImport("__Internal")]
     private static extern void DownloadZip(string zipName, string paths, byte[] contents, int[] sizes, int count);
 
@@ -39,20 +40,20 @@ public static class DataExporterWebGL
         var rawSnapshotHeader = new List<string> { "trial_index" };
         if (snapshotCache.Header != null) { rawSnapshotHeader.AddRange(snapshotCache.Header); }
 
-        // s‚²‚Æ‚Ìƒ‹[ƒv
+        // ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Æ‚Ìƒï¿½ï¿½[ï¿½v
         for (int i = 0; i < trials.Count; i++)
         {
             var (s0, s1, p0, p1) = trials[i];
             int trialId = i + 1;
 
-            // Streamƒf[ƒ^ˆ—
+            // Streamï¿½fï¿½[ï¿½^ï¿½ï¿½ï¿½ï¿½
             if (s1 > s0)
             {
-                // ƒŠƒXƒg‘€ì‚Í“¯Šú“I‚És‚¤i•‰‰×ŒyŒ¸‚Ì‚½‚ß‚±‚±‚ÍˆêŠ‡j
+                // ï¿½ï¿½ï¿½Xï¿½gï¿½ï¿½ï¿½ï¿½Í“ï¿½ï¿½ï¿½ï¿½Iï¿½Ésï¿½ï¿½ï¿½iï¿½ï¿½ï¿½×Œyï¿½ï¿½ï¿½Ì‚ï¿½ï¿½ß‚ï¿½ï¿½ï¿½ï¿½ÍˆêŠ‡ï¿½j
                 var (header, rows) = CsvGenerator.SliceCache(streamCache, s0, s1);
                 if (rows.Count > 0)
                 {
-                    // Å‚àd‚¢CSV•¶š—ñ¶¬‚Ì‚İƒRƒ‹[ƒ`ƒ“‚Å•ªUˆ—
+                    // ï¿½Å‚ï¿½ï¿½dï¿½ï¿½CSVï¿½ï¿½ï¿½ï¿½ï¿½ñ¶ï¿½ï¿½Ì‚İƒRï¿½ï¿½ï¿½[ï¿½`ï¿½ï¿½ï¿½Å•ï¿½ï¿½Uï¿½ï¿½ï¿½ï¿½
                     byte[] content = null;
                     yield return CreateCSVContentRoutine(header, rows, result => content = result);
                     
@@ -61,17 +62,17 @@ public static class DataExporterWebGL
                 }
             }
 
-            // Snapshotƒf[ƒ^’~Ï
+            // Snapshotï¿½fï¿½[ï¿½^ï¿½~ï¿½ï¿½
             if (p1 > p0)
             {
                 CsvGenerator.AccumulateSnapshotRows(snapshotCache, p0, p1, trialId, allSnapshotRows);
             }
 
-            // s‚²‚Æ‚É1ƒtƒŒ[ƒ€‹xŒe
+            // ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Æ‚ï¿½1ï¿½tï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½xï¿½e
             yield return null;
         }
 
-        // Snapshot“‡o—Í
+        // Snapshotï¿½ï¿½ï¿½ï¿½ï¿½oï¿½ï¿½
         if (allSnapshotRows.Count > 0)
         {
             var (finalHeader, finalRows) = CsvGenerator.FilterActiveColumns(rawSnapshotHeader, allSnapshotRows);
@@ -83,25 +84,40 @@ public static class DataExporterWebGL
             files.Add(new DataExporter.FileInMemory { Path = path, Content = content });
         }
 
-        // JSŒÄ‚Ño‚µ‚ÅZipƒ_ƒEƒ“ƒ[ƒh
+        // ã‚¹ãƒ†ãƒ¼ã‚¸æƒ…å ± (stage.json) ã‚’ä½µå‡ºåŠ›
+        try
+        {
+            byte[] stageJson = StageInfoExporter.BuildJsonBytes();
+            files.Add(new DataExporter.FileInMemory
+            {
+                Path = $"{baseDirName}/{StageInfoExporter.FileName}",
+                Content = stageJson,
+            });
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[DataExporterWebGL] stage.json export failed: {ex.Message}");
+        }
+
+        // JSå‘¼ã³å‡ºã—ã§Zipãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰
         ProcessFiles(files, $"{baseDirName}.zip");
         
         onComplete?.Invoke();
     }
 
     /// <summary>
-    /// LogCsvGenerator.CreateCSVContent ‚ÌƒRƒ‹[ƒ`ƒ“”ÅB
-    /// ‘å—Ê‚Ìs‚ğˆ—‚·‚éÛA’èŠú“I‚É yield return null ‚ğ‹²‚ñ‚ÅƒtƒŠ[ƒY‚ğ–h‚®B
+    /// LogCsvGenerator.CreateCSVContent ï¿½ÌƒRï¿½ï¿½ï¿½[ï¿½`ï¿½ï¿½ï¿½ÅB
+    /// ï¿½ï¿½Ê‚Ìsï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÛAï¿½ï¿½ï¿½ï¿½Iï¿½ï¿½ yield return null ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åƒtï¿½ï¿½ï¿½[ï¿½Yï¿½ï¿½hï¿½ï¿½ï¿½B
     /// </summary>
     private static IEnumerator CreateCSVContentRoutine(List<string> header, List<object[]> rows, Action<byte[]> onResult)
     {
         var sb = new StringBuilder();
 
-        // ƒwƒbƒ_
+        // ï¿½wï¿½bï¿½_
         var headerCells = header.Select(h => CsvUtility.EscapeCSV(h)).ToList();
         sb.AppendLine(CsvUtility.JoinRow(headerCells));
 
-        // ƒf[ƒ^
+        // ï¿½fï¿½[ï¿½^
         int count = 0;
         var rowBuffer = new List<string>(header.Count);
 
@@ -120,7 +136,7 @@ public static class DataExporterWebGL
             sb.AppendLine(CsvUtility.JoinRow(rowBuffer));
 
             count++;
-            // 500s‚²‚Æ‚É1ƒtƒŒ[ƒ€‹xŒeiŠÂ‹«‚É‡‚í‚¹‚Ä’²®‰Âj
+            // 500ï¿½sï¿½ï¿½ï¿½Æ‚ï¿½1ï¿½tï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½xï¿½eï¿½iï¿½Â‹ï¿½ï¿½Éï¿½ï¿½í‚¹ï¿½Ä’ï¿½ï¿½ï¿½ï¿½Âj
             if (count % 500 == 0)
             {
                 yield return null;

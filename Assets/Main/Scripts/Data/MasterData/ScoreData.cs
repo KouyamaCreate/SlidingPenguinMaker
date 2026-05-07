@@ -4,16 +4,16 @@ using UnityEngine;
 [Serializable]
 public class ScoreData
 {
-    [Header("ƒXƒRƒAİ’è")]
+    [Header("ã‚¹ã‚³ã‚¢è¨­å®š")]
     public float baseScore = 100.0f;
     public Color32 displayColor = new Color32(255, 30, 30, 255);
 
-    [Header("ƒŠƒUƒ‹ƒg•\¦İ’è")]
+    [Header("ãƒªã‚¶ãƒ«ãƒˆè¡¨ç¤ºè¨­å®š")]
     public bool shouldShowInResult = true;
     public string resultLabel = "Score Item";
 
-    [Header("ƒOƒŒ[ƒh•]‰¿‚ÅŒvZ‚³‚ê‚é‚Ìİ’è")]
-    public GradeCategory gradeCategory = GradeCategory.Others; // ‚±‚ÌƒXƒRƒA€–Ú‚ª‚Ç‚Ì•]‰¿ƒJƒeƒSƒŠ‚É‘®‚·‚é‚©
+    [Header("ã‚°ãƒ¬ãƒ¼ãƒ‰è©•ä¾¡ã§è¨ˆç®—ã•ã‚Œã‚‹æ™‚ã®è¨­å®š")]
+    public GradeCategory gradeCategory = GradeCategory.Others; // ã“ã®ã‚¹ã‚³ã‚¢é …ç›®ãŒã©ã®è©•ä¾¡ã‚«ãƒ†ã‚´ãƒªã«å±ã™ã‚‹ã‹
     [Range(0, int.MaxValue)]
-    public int gradeCap = int.MaxValue; // ƒOƒŒ[ƒh•]‰¿ŒvZ‚Ö‚Ì”½‰fãŒÀ
+    public int gradeCap = int.MaxValue; // ã‚°ãƒ¬ãƒ¼ãƒ‰è©•ä¾¡è¨ˆç®—ã¸ã®åæ˜ ä¸Šé™
 }
