@@ -13,6 +13,13 @@ namespace StageMaker
     {
         public const string EraserId = "__eraser__";
 
+        // パレットに表示しない (= ユーザが配置できない) 内部パーツ
+        // Start / Goal は固定位置・Shark は周辺の海に自動配置
+        private static readonly HashSet<string> InternalPartIds = new HashSet<string>
+        {
+            "PlatformStart", "PlatformGoal", "Shark"
+        };
+
         private StageMakerSceneController controller;
         private StagePartCatalog catalog;
         private CustomStageData currentData;
@@ -164,6 +171,7 @@ namespace StageMaker
                 foreach (var def in catalog.Parts)
                 {
                     if (def == null) continue;
+                    if (InternalPartIds.Contains(def.id)) { continue; }
                     CreatePartRow(def);
                 }
             }
@@ -439,10 +447,28 @@ namespace StageMaker
 
             if (currentData == null || catalog == null) return;
 
+            // 固定 Start / Goal をビジュアルとして表示 (DraggablePart を付けないので操作対象にならない)
+            SpawnLockedFixedPart("PlatformStart", CustomStageBuilder.FixedStartPosition);
+            SpawnLockedFixedPart("PlatformGoal", CustomStageBuilder.FixedGoalPosition);
+
             foreach (var p in currentData.parts)
             {
                 SpawnPlacementInScene(p);
             }
+        }
+
+        /// <summary>
+        /// 固定位置に置かれた Start/Goal を編集ビュー上に表示する (操作不可)。
+        /// </summary>
+        private void SpawnLockedFixedPart(string id, Vector3 worldPos)
+        {
+            var def = catalog.Find(id);
+            if (def == null || def.prefab == null) { return; }
+            Vector3 pos = worldPos + def.spawnOffset;
+            var go = Instantiate(def.prefab, pos, Quaternion.identity, partsRoot);
+            go.name = def.id + "_Locked";
+            DisableGameLogicForEditor(go);
+            // DraggablePart は付けないので FindPartUnderCursor の対象外 = ドラッグ不可
         }
 
         private GameObject SpawnPlacementInScene(CustomStagePartPlacement p)
@@ -456,13 +482,189 @@ namespace StageMaker
             go.name = def.id;
 
             // 編集中はゲームロジック (Controller類) を走らせない。
-            // (例: SharkController は SharkManager 親を要求し、Update() で NRE を起こす)
             DisableGameLogicForEditor(go);
 
             // 入力ハンドリングはエディタの Update() で行うので Collider 追加は不要。
             var dragger = go.AddComponent<DraggablePart>();
             dragger.Initialize(p, def);
+
+            // 方向性パーツ: 方向ハンドルと結ぶ線をスポーン
+            if (def.isDirectional)
+            {
+                EnsureDirectionTarget(p);
+                SpawnDirectionHandle(dragger);
+            }
             return go;
+        }
+
+        private static void EnsureDirectionTarget(CustomStagePartPlacement p)
+        {
+            // 既定の方向ターゲット = 配置位置 + Z+5
+            if (p.directionTarget == Vector3.zero)
+            {
+                p.directionTarget = p.worldPosition + new Vector3(0f, 0f, 5f);
+            }
+        }
+
+        // Blizzard ハンドルは固定半径 (回転のみ)
+        public const float BlizzardHandleRadius = 4.0f;
+
+        private void SpawnDirectionHandle(DraggablePart owner)
+        {
+            GameObject handleGo;
+            string kind = owner.definition.directionalKind;
+
+            if (kind == "MovingIce" || kind == "MovingIcePingPong" || kind == "Seal")
+            {
+                // 移動先プレビュー: パーツの prefab そのものを半透明で配置
+                handleGo = Instantiate(owner.definition.prefab, owner.placement.directionTarget + owner.definition.spawnOffset, Quaternion.identity, partsRoot);
+                handleGo.name = owner.definition.id + "_GhostEnd";
+                DisableGameLogicForEditor(handleGo);
+                ApplyTransparency(handleGo, 0.35f);
+            }
+            else if (kind == "Blizzard")
+            {
+                // Blizzard: 半径固定の小さな矢印アイコン (= スフィア + ライン)
+                handleGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                handleGo.name = owner.definition.id + "_Handle";
+                handleGo.transform.SetParent(partsRoot, false);
+                handleGo.transform.localScale = Vector3.one * 0.9f;
+                var col = handleGo.GetComponent<Collider>();
+                if (col != null) col.enabled = false;
+                var renderer = handleGo.GetComponent<Renderer>();
+                var mat = new Material(Shader.Find("Standard"));
+                mat.color = new Color(0.5f, 0.85f, 1.0f, 1f);
+                renderer.material = mat;
+
+                // Blizzard の方向ハンドルは固定半径の円周上に置く
+                Vector3 ownerPos = owner.transform.position;
+                Vector3 dir = (owner.placement.directionTarget - ownerPos);
+                dir.y = 0f;
+                if (dir.sqrMagnitude < 0.0001f) { dir = Vector3.forward; }
+                handleGo.transform.position = ownerPos + dir.normalized * BlizzardHandleRadius;
+                owner.placement.directionTarget = handleGo.transform.position;
+            }
+            else
+            {
+                // 想定外: フォールバックで小さなスフィア
+                handleGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                handleGo.name = owner.definition.id + "_Handle";
+                handleGo.transform.SetParent(partsRoot, false);
+                handleGo.transform.position = owner.placement.directionTarget;
+                handleGo.transform.localScale = Vector3.one * 1.2f;
+                var col = handleGo.GetComponent<Collider>();
+                if (col != null) col.enabled = false;
+            }
+
+            var handleDp = handleGo.AddComponent<DraggablePart>();
+            handleDp.isHandle = true;
+            handleDp.placement = owner.placement;
+            handleDp.definition = owner.definition;
+            handleDp.partner = owner;
+            owner.partner = handleDp;
+
+            // 配置直後から見た目に反映する (特に風の向き)
+            if (kind == "Blizzard")
+            {
+                ApplyBlizzardWindLive(owner);
+            }
+
+            // 接続線
+            var lineGo = new GameObject("Link");
+            lineGo.transform.SetParent(owner.transform, false);
+            var lr = lineGo.AddComponent<LineRenderer>();
+            lr.useWorldSpace = true;
+            lr.widthMultiplier = 0.18f;
+            lr.material = new Material(Shader.Find("Sprites/Default"));
+            lr.startColor = new Color(0.3f, 1.0f, 0.4f, 0.9f);
+            lr.endColor = new Color(0.3f, 1.0f, 0.4f, 0.4f);
+            lr.positionCount = 2;
+            owner.linkLine = lr;
+            UpdateLinkLine(owner);
+        }
+
+        public static void UpdateLinkLine(DraggablePart owner)
+        {
+            if (owner == null || owner.linkLine == null || owner.partner == null) return;
+            owner.linkLine.SetPosition(0, owner.transform.position + new Vector3(0f, 0.5f, 0f));
+            owner.linkLine.SetPosition(1, owner.partner.transform.position);
+        }
+
+        /// <summary>
+        /// 編集ビュー上でも風向き / エフェクトをリアルタイムに反映するためのヘルパ。
+        /// ※ BlizzardController が disabled の状態でも、public メソッド呼び出しは行えて
+        ///    内部の ParticleSystem への反映自体は走るのでそのまま使える。
+        /// </summary>
+        public static void ApplyBlizzardWindLive(DraggablePart body)
+        {
+            if (body == null || body.placement == null) { return; }
+            var bc = body.GetComponent<BlizzardController>();
+            if (bc == null) { return; }
+            CustomDirectionalRuntime.ApplyBlizzardWind(bc, body.placement.worldPosition, body.placement.directionTarget);
+        }
+
+        /// <summary>
+        /// Blizzard 系のハンドルは「回転のみ」を許可するので、
+        /// オーナー (本体) を中心とした固定半径の円周上に拘束する。
+        /// それ以外のパーツは入力された位置をそのまま返す。
+        /// </summary>
+        public static Vector3 ConstrainHandlePosition(DraggablePart handle, Vector3 desired)
+        {
+            if (handle == null || handle.partner == null || handle.definition == null) { return desired; }
+            if (handle.definition.directionalKind != "Blizzard") { return desired; }
+
+            Vector3 ownerPos = handle.partner.transform.position;
+            Vector3 dir = desired - ownerPos;
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 0.0001f) { dir = Vector3.forward; }
+            Vector3 constrained = ownerPos + dir.normalized * BlizzardHandleRadius;
+            constrained.y = ownerPos.y; // 高さも本体に合わせる
+            return constrained;
+        }
+
+        /// <summary>
+        /// 任意のヒエラルキーの Renderer に対し、Standard シェーダーを Transparent モードへ切替えて
+        /// 半透明にする。プレビュー / 移動先ゴースト用。
+        /// </summary>
+        private static void ApplyTransparency(GameObject root, float alpha)
+        {
+            foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (r == null) continue;
+                var mats = r.materials; // インスタンスを生成して個別に編集する
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    var mat = mats[i];
+                    if (mat == null) continue;
+                    if (mat.HasProperty("_Mode"))
+                    {
+                        mat.SetFloat("_Mode", 3); // Transparent
+                    }
+                    if (mat.HasProperty("_SrcBlend"))
+                    {
+                        mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                        mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                        mat.SetInt("_ZWrite", 0);
+                    }
+                    mat.DisableKeyword("_ALPHATEST_ON");
+                    mat.EnableKeyword("_ALPHABLEND_ON");
+                    mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                    mat.renderQueue = 3000;
+                    if (mat.HasProperty("_Color"))
+                    {
+                        var c = mat.color;
+                        c.a = alpha;
+                        mat.color = c;
+                    }
+                    if (mat.HasProperty("_BaseColor"))
+                    {
+                        var c = mat.GetColor("_BaseColor");
+                        c.a = alpha;
+                        mat.SetColor("_BaseColor", c);
+                    }
+                }
+                r.materials = mats;
+            }
         }
 
         private static void DisableGameLogicForEditor(GameObject root)
@@ -543,6 +745,10 @@ namespace StageMaker
             if (ghost == null) return;
             if (!accepted || currentData == null || ghostDraggable == null || ghostDraggable.placement == null)
             {
+                if (ghostDraggable != null && ghostDraggable.partner != null)
+                {
+                    Destroy(ghostDraggable.partner.gameObject);
+                }
                 Destroy(ghost);
                 return;
             }
@@ -593,9 +799,10 @@ namespace StageMaker
                 // 既存パーツの上をクリック
                 if (part != null)
                 {
+                    // 消しゴムは本体パーツのみ削除可 (ハンドル単独では消せない)
                     if (eraserMode)
                     {
-                        RequestDelete(part);
+                        if (!part.isHandle) { RequestDelete(part); }
                         return;
                     }
                     if (TryRaycastGround(out Vector3 hitForDrag))
@@ -618,10 +825,58 @@ namespace StageMaker
                 if (TryRaycastGround(out Vector3 hit))
                 {
                     Vector3 newPos = hit + currentDragGroundOffset;
-                    currentDrag.transform.position = newPos;
-                    if (currentDrag.placement != null && currentDrag.definition != null)
+
+                    if (currentDrag.placement == null) { return; }
+
+                    if (currentDrag.isHandle)
                     {
-                        currentDrag.placement.worldPosition = newPos - currentDrag.definition.spawnOffset;
+                        // ハンドル: 種別ごとに配置先を拘束
+                        newPos = ConstrainHandlePosition(currentDrag, newPos);
+                        currentDrag.transform.position = newPos;
+                        currentDrag.placement.directionTarget = newPos;
+                        if (currentDrag.partner != null)
+                        {
+                            UpdateLinkLine(currentDrag.partner);
+                            // Blizzard はハンドル回転に追従して風向きをリアルタイム更新
+                            if (currentDrag.partner.definition != null
+                                && currentDrag.partner.definition.directionalKind == "Blizzard")
+                            {
+                                ApplyBlizzardWindLive(currentDrag.partner);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 本体: worldPosition を更新し、ハンドル (とリンク) も同じ delta だけ動かす
+                        Vector3 oldPos = currentDrag.transform.position;
+                        Vector3 delta = newPos - oldPos;
+                        currentDrag.transform.position = newPos;
+                        if (currentDrag.definition != null)
+                        {
+                            currentDrag.placement.worldPosition = newPos - currentDrag.definition.spawnOffset;
+                        }
+                        if (currentDrag.partner != null)
+                        {
+                            // Blizzard ハンドルは本体に対して固定半径なので位置を再計算
+                            if (currentDrag.partner.definition != null && currentDrag.partner.definition.directionalKind == "Blizzard")
+                            {
+                                Vector3 newHandlePos = ConstrainHandlePosition(currentDrag.partner, currentDrag.partner.transform.position + delta);
+                                currentDrag.partner.transform.position = newHandlePos;
+                                currentDrag.placement.directionTarget = newHandlePos;
+                            }
+                            else
+                            {
+                                currentDrag.partner.transform.position += delta;
+                                currentDrag.placement.directionTarget += delta;
+                            }
+                        }
+                        UpdateLinkLine(currentDrag);
+                        // Blizzard 本体を動かしたときも風向きをリアルタイム更新
+                        if (currentDrag.definition != null
+                            && currentDrag.definition.directionalKind == "Blizzard")
+                        {
+                            ApplyBlizzardWindLive(currentDrag);
+                        }
                     }
                 }
             }
@@ -667,6 +922,12 @@ namespace StageMaker
         {
             if (part == null || currentData == null) return;
             if (part.placement != null) { currentData.parts.Remove(part.placement); }
+
+            // 方向性パーツの場合は対のハンドルも消す
+            if (part.partner != null)
+            {
+                Destroy(part.partner.gameObject);
+            }
             Destroy(part.gameObject);
         }
 

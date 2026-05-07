@@ -40,26 +40,9 @@ public class StageGenerator : MonoBehaviour
     {
         GenerateStage((int)stageType);
         isLatestSceneSettingMode = isSettingMode;
-
-        // カスタムステージのときはプレイヤーを PlatformStart の上に再配置する。
-        // (PlayerRespawnController は最初に踏んだ Platform を respawn 候補にするため、
-        //  プレイヤーが落水する位置から始まると即座にスタート不能になる)
-        if ((StageType)((int)stageType) == StageType.Custom)
-        {
-            RepositionPlayerToStart();
-        }
-    }
-
-    private static void RepositionPlayerToStart()
-    {
-        var startGo = GameObject.FindGameObjectWithTag("Start");
-        var playerGo = GameObject.FindGameObjectWithTag("Player");
-        if (startGo == null || playerGo == null) { return; }
-
-        // PlatformStart の少し上に置く
-        Vector3 startPos = startGo.transform.position + new Vector3(0f, 1.0f, 0f);
-        playerGo.transform.position = startPos;
-        playerGo.transform.rotation = Quaternion.identity;
+        // ※カスタムステージでも Penguin には手を加えない。
+        //   PlatformStart は固定で (0, 0, 0) に置かれており、Penguin の元位置 (0, 0.5, 0)
+        //   の真下にあるので、デフォルトステージと同じく自然落下で着地する。
     }
 
     private void GenerateStage(int index)

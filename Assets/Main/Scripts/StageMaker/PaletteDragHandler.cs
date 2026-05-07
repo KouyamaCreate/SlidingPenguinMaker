@@ -45,12 +45,38 @@ namespace StageMaker
             if (ghost == null) return;
             if (editor.TryRaycastGround(eventData.position, out Vector3 hitPoint))
             {
-                ghost.transform.position = hitPoint + (ghostDraggable != null && ghostDraggable.definition != null
+                Vector3 newPos = hitPoint + (ghostDraggable != null && ghostDraggable.definition != null
                     ? ghostDraggable.definition.spawnOffset
                     : Vector3.zero);
-                if (ghostDraggable != null && ghostDraggable.placement != null && ghostDraggable.definition != null)
+                Vector3 delta = newPos - ghost.transform.position;
+                ghost.transform.position = newPos;
+
+                if (ghostDraggable != null && ghostDraggable.placement != null)
                 {
                     ghostDraggable.placement.worldPosition = hitPoint;
+                    // 方向ハンドル付きの場合は同じ delta だけ動かしてリンクを更新
+                    if (ghostDraggable.partner != null)
+                    {
+                        // Blizzard ハンドルは本体に対して固定半径
+                        if (ghostDraggable.partner.definition != null && ghostDraggable.partner.definition.directionalKind == "Blizzard")
+                        {
+                            Vector3 newHandlePos = StageMakerEditorView.ConstrainHandlePosition(ghostDraggable.partner, ghostDraggable.partner.transform.position + delta);
+                            ghostDraggable.partner.transform.position = newHandlePos;
+                            ghostDraggable.placement.directionTarget = newHandlePos;
+                        }
+                        else
+                        {
+                            ghostDraggable.partner.transform.position += delta;
+                            ghostDraggable.placement.directionTarget += delta;
+                        }
+                        StageMakerEditorView.UpdateLinkLine(ghostDraggable);
+                    }
+                    // Blizzard はリアルタイムに風向きを更新
+                    if (ghostDraggable.definition != null
+                        && ghostDraggable.definition.directionalKind == "Blizzard")
+                    {
+                        StageMakerEditorView.ApplyBlizzardWindLive(ghostDraggable);
+                    }
                 }
             }
         }

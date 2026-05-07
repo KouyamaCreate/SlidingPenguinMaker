@@ -1,4 +1,5 @@
 using System;
+using StageMaker;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,13 +18,23 @@ public class StageSelector : MonoBehaviour
     {
         toggleGroup = GetComponent<ToggleGroup>();
 
-        // �o�^����Ă���X�e�[�W������ɁAToggle�𐶐�
+        // 1) 既存のデフォルトステージ用トグルを生成 (Custom は別途下で扱う)
         foreach (StageType stage in Enum.GetValues(typeof(StageType)))
         {
-            GameObject toggleObject = Instantiate(stageTogglePrefab, transform);
-
-            StageToggleController toggleController = toggleObject.GetComponent<StageToggleController>();
+            if (stage == StageType.Custom) { continue; }
+            var toggleObject = Instantiate(stageTogglePrefab, transform);
+            var toggleController = toggleObject.GetComponent<StageToggleController>();
             toggleController.Initialize(stage, toggleGroup);
+        }
+
+        // 2) Stage Maker で作成したカスタムステージを順に追加
+        var customStages = CustomStageRepository.LoadAll();
+        foreach (var data in customStages)
+        {
+            if (data == null || string.IsNullOrEmpty(data.id)) { continue; }
+            var toggleObject = Instantiate(stageTogglePrefab, transform);
+            var toggleController = toggleObject.GetComponent<StageToggleController>();
+            toggleController.Initialize(StageType.Custom, toggleGroup, data.id, data.displayName);
         }
     }
 }

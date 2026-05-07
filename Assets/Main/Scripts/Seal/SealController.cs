@@ -136,6 +136,15 @@ public class SealController : MonoBehaviour
         if (currentIndex >= sealData.Waypoints.Count) currentIndex = 0;
     }
 
+    /// <summary>
+    /// ステージメーカーから経由地点 (begin → end → begin → ...) を動的に設定する。
+    /// </summary>
+    public void OverrideWaypoints(Vector3 begin, Vector3 end)
+    {
+        if (sealData == null) { sealData = new SealData(); }
+        sealData.SetWaypoints(new[] { begin, end });
+    }
+
     public void ResetTransform()
     {
         transform.position = initialPosition;

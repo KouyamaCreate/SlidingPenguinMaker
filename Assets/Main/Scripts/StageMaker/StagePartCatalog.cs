@@ -24,6 +24,17 @@ namespace StageMaker
         public bool unique;
         public Vector3 spawnOffset = Vector3.zero;
         public bool requiresEvenRow;
+
+        /// <summary>
+        /// true のとき、エディタで配置時に追加で「方向ハンドル」が出現し、
+        /// CustomStagePartPlacement.directionTarget を設定できる。
+        /// </summary>
+        public bool isDirectional;
+
+        /// <summary>
+        /// 方向系パーツの runtime 種別 (MovingIce / Blizzard / Seal)
+        /// </summary>
+        public string directionalKind;
     }
 
     [CreateAssetMenu(menuName = "SlidingPenguin/Stage Part Catalog", fileName = "StagePartCatalog")]

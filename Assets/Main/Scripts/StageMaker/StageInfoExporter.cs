@@ -6,37 +6,51 @@ namespace StageMaker
 {
     /// <summary>
     /// CSV エクスポート時に同梱する stage.json のバイト列を生成する。
+    /// カスタムステージのときは Maker の Export と完全に同じ JSON フォーマット
+    /// (= CustomStageData の JsonUtility 直列化) を出力するので、再インポート可能。
     /// </summary>
     public static class StageInfoExporter
     {
         public const string FileName = "stage.json";
 
         [Serializable]
-        private class ExportedStageInfo
+        private class DefaultStageInfo
         {
             public string exportedAt;
             public string stageType;
-            public string customStageId;
-            public CustomStageData customStage; // Custom のときのみ実体が入る
         }
 
-        /// <summary>
-        /// 直近にプレイしたステージ情報を JSON バイト列として返す。
-        /// </summary>
         public static byte[] BuildJsonBytes()
         {
-            var info = new ExportedStageInfo
+            string json;
+            if (StageGenerator.GetStageType() == StageType.Custom)
             {
-                exportedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
-                stageType = StageGenerator.GetStageType().ToString(),
-                customStageId = StageGenerator.GetSelectedCustomStageId(),
-                customStage = StageGenerator.GetStageType() == StageType.Custom
-                    ? StageGenerator.GetLastBuiltCustomStage()
-                    : null,
-            };
+                var data = StageGenerator.GetLastBuiltCustomStage();
+                if (data != null)
+                {
+                    json = data.ToJson(prettyPrint: true);
+                }
+                else
+                {
+                    // フォールバック: 直接読み出せなかった場合は ID だけ書き出す
+                    var info = new DefaultStageInfo
+                    {
+                        exportedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                        stageType = "Custom",
+                    };
+                    json = JsonUtility.ToJson(info, true);
+                }
+            }
+            else
+            {
+                var info = new DefaultStageInfo
+                {
+                    exportedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    stageType = StageGenerator.GetStageType().ToString(),
+                };
+                json = JsonUtility.ToJson(info, true);
+            }
 
-            string json = JsonUtility.ToJson(info, true);
-            // BOM 付き UTF-8 にして Excel などでの可読性を担保
             byte[] preamble = Encoding.UTF8.GetPreamble();
             byte[] body = Encoding.UTF8.GetBytes(json);
             byte[] result = new byte[preamble.Length + body.Length];

@@ -27,11 +27,12 @@ public class TitleManager : MonoBehaviour
         var go = new GameObject("StageMakerButton", typeof(RectTransform));
         var rt = go.GetComponent<RectTransform>();
         rt.SetParent(canvas.transform, false);
-        rt.anchorMin = new Vector2(1, 0);
-        rt.anchorMax = new Vector2(1, 0);
-        rt.pivot = new Vector2(1, 0);
-        rt.anchoredPosition = new Vector2(-30, 30);
-        rt.sizeDelta = new Vector2(280, 70);
+        // 既存の StartButton (右下) / SettingButton (右上) と重ならない左下に配置する
+        rt.anchorMin = new Vector2(0, 0);
+        rt.anchorMax = new Vector2(0, 0);
+        rt.pivot = new Vector2(0, 0);
+        rt.anchoredPosition = new Vector2(30, 30);
+        rt.sizeDelta = new Vector2(260, 70);
 
         var img = go.AddComponent<Image>();
         img.color = new Color(0.20f, 0.55f, 0.30f, 1f);

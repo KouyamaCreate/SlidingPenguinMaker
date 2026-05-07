@@ -10,34 +10,55 @@ public class StageToggleController : MonoBehaviour
     private Toggle toggle;
     private StageType stageType;
 
+    /// <summary>
+    /// stageType == Custom のときに使用するカスタムステージ ID。
+    /// 空文字列の場合はデフォルトステージのトグルとして扱う。
+    /// </summary>
+    private string customStageId = string.Empty;
+
     public void Initialize(StageType type, ToggleGroup toggleGroup)
     {
+        Initialize(type, toggleGroup, customStageId: string.Empty, displayName: type.ToString());
+    }
+
+    public void Initialize(StageType type, ToggleGroup toggleGroup, string customStageId, string displayName)
+    {
         stageType = type;
+        this.customStageId = customStageId ?? string.Empty;
+
         toggle = GetComponent<Toggle>();
         toggle.group = toggleGroup;
 
-        // "GameScoreStore"�Ɍ��ݓo�^����Ă��� StageType �� Toggle �� ON �ɂ���
+        // 直近選択していた組み合わせを再選択する
         if (type == StageGenerator.GetStageType())
         {
-            toggle.isOn = true;
+            bool sameId = (type != StageType.Custom) || (this.customStageId == StageGenerator.GetSelectedCustomStageId());
+            if (sameId) { toggle.isOn = true; }
         }
         toggle.onValueChanged.AddListener(OnToggleChanged);
 
-        // ���x���̐ݒ�(�R�Â��Ă��� StageType �����x���ɐݒ�)
-        SetLabel(type.ToString());
+        SetLabel(displayName);
     }
 
     private void SetLabel(string newLabel)
     {
-        string spacedWord = StringCaseUtility.ToSpacedWords(newLabel);
-        label.SetText(spacedWord);
+        if (label == null) { return; }
+        // CamelCase 由来の名前なら単語間にスペースを入れる
+        string formatted = StringCaseUtility.ToSpacedWords(newLabel);
+        label.SetText(formatted);
     }
 
     public void OnToggleChanged(bool isOn)
     {
-        if(isOn)
+        if (!isOn) { return; }
+        StageGenerator.SetStageType(stageType);
+        if (stageType == StageType.Custom)
         {
-            StageGenerator.SetStageType(stageType);
+            StageGenerator.SetSelectedCustomStageId(customStageId);
+        }
+        else
+        {
+            StageGenerator.SetSelectedCustomStageId(string.Empty);
         }
     }
 }

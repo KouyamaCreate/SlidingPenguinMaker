@@ -102,9 +102,16 @@ namespace StageMaker
             var fitter = contentGo.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            // 新規作成ボタン (フッタ)
+            BuildFooterButtons();
+        }
+
+        private Text statusText;
+
+        private void BuildFooterButtons()
+        {
+            // 新規作成ボタン (中央)
             var (newGo, newBtn, _) = StageMakerUIFactory.CreateButton(gameObject, "NewStageButton",
-                "+ New Stage", new Color(0.20f, 0.55f, 0.30f, 1f), Color.white, new Vector2(280, 70));
+                "+ New Stage", new Color(0.20f, 0.55f, 0.30f, 1f), Color.white, new Vector2(260, 70));
             var newRt = newGo.GetComponent<RectTransform>();
             newRt.anchorMin = new Vector2(0.5f, 0);
             newRt.anchorMax = new Vector2(0.5f, 0);
@@ -114,6 +121,59 @@ namespace StageMaker
                 var newData = CustomStageData.CreateNew("New Stage");
                 controller.EnterEditor(newData);
             });
+
+            // Import ボタン (左)
+            var (importGo, importBtn, _) = StageMakerUIFactory.CreateButton(gameObject, "ImportButton",
+                "Import", new Color(0.30f, 0.45f, 0.65f, 1f), Color.white, new Vector2(160, 60));
+            var importRt = importGo.GetComponent<RectTransform>();
+            importRt.anchorMin = new Vector2(0.5f, 0);
+            importRt.anchorMax = new Vector2(0.5f, 0);
+            importRt.anchoredPosition = new Vector2(-220, 60);
+            importBtn.onClick.AddListener(() =>
+            {
+                int count = CustomStageRepository.ImportFromFolder();
+                ShowStatus(count > 0
+                    ? $"Imported {count} stage(s) from {CustomStageRepository.GetImportFolderPath()}"
+                    : $"No JSON found in {CustomStageRepository.GetImportFolderPath()} (open and drop files there).");
+                controller.ReloadStages();
+                controller.ShowList();
+            });
+
+            // Open Folder ボタン (右) — エクスポート/インポート両フォルダの親を開く
+            var (openGo, openBtn, _) = StageMakerUIFactory.CreateButton(gameObject, "OpenFolderButton",
+                "Open Folder", new Color(0.45f, 0.40f, 0.55f, 1f), Color.white, new Vector2(160, 60));
+            var openRt = openGo.GetComponent<RectTransform>();
+            openRt.anchorMin = new Vector2(0.5f, 0);
+            openRt.anchorMax = new Vector2(0.5f, 0);
+            openRt.anchoredPosition = new Vector2(220, 60);
+            openBtn.onClick.AddListener(() =>
+            {
+                CustomStageRepository.OpenFolderInOS(CustomStageRepository.GetExportFolderPath());
+                CustomStageRepository.OpenFolderInOS(CustomStageRepository.GetImportFolderPath());
+            });
+
+            // ステータス表示テキスト (フッタ下)
+            var statusGo = new GameObject("Status", typeof(RectTransform));
+            var statusRt = statusGo.GetComponent<RectTransform>();
+            statusRt.SetParent(transform, false);
+            statusRt.anchorMin = new Vector2(0, 0);
+            statusRt.anchorMax = new Vector2(1, 0);
+            statusRt.pivot = new Vector2(0.5f, 0);
+            statusRt.anchoredPosition = new Vector2(0, 16);
+            statusRt.sizeDelta = new Vector2(-40, 24);
+            statusText = statusGo.AddComponent<Text>();
+            statusText.font = StageMakerUIFactory.GetFont();
+            statusText.fontSize = 14;
+            statusText.color = new Color(0.85f, 0.92f, 1f, 1f);
+            statusText.alignment = TextAnchor.MiddleCenter;
+            statusText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            statusText.text = "";
+        }
+
+        private void ShowStatus(string msg)
+        {
+            if (statusText != null) { statusText.text = msg; }
+            Debug.Log("[StageMakerListView] " + msg);
         }
 
         public void Refresh(List<CustomStageData> customStages)
@@ -152,6 +212,12 @@ namespace StageMaker
                 () => controller.EnterEditor(data));
             CreateRowButton(row, "Play", new Color(0.20f, 0.50f, 0.85f, 1f),
                 () => controller.PlayCustomStage(data.id));
+            CreateRowButton(row, "Export", new Color(0.30f, 0.45f, 0.65f, 1f),
+                () =>
+                {
+                    string path = CustomStageRepository.Export(data);
+                    ShowStatus(string.IsNullOrEmpty(path) ? "Export failed." : "Exported to: " + path);
+                });
             CreateRowButton(row, "Delete", new Color(0.65f, 0.20f, 0.20f, 1f),
                 () =>
                 {

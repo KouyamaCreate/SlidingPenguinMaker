@@ -5,7 +5,8 @@ namespace StageMaker
 {
     /// <summary>
     /// パレット項目のサムネイル用に、各パーツの 3D プレビューを RenderTexture に描き出すヘルパー。
-    /// 編集ビュー表示中だけ使用するので、シーン再構築時に専用リグを作って一度だけレンダする。
+    /// メインステージから遠く離れた位置に Z 方向に並べて、各カメラの near/far を絞ることで
+    /// 隣接パーツが映り込まないようにする。
     /// </summary>
     public static class PalettePreviewRenderer
     {
@@ -14,7 +15,8 @@ namespace StageMaker
 
         // メインステージから十分離れた位置でレンダリングする
         private static readonly Vector3 PreviewRigOrigin = new Vector3(2000f, 0f, 0f);
-        private const float SpacingX = 8f;
+        // Z 方向に大きく離してパーツ同士が干渉しないようにする
+        private const float SpacingZ = 100f;
         private const int TexSize = 128;
 
         private static GameObject rigRoot;
@@ -46,7 +48,7 @@ namespace StageMaker
             EnsureRig();
             int index = cache.Count;
 
-            Vector3 anchor = PreviewRigOrigin + new Vector3(index * SpacingX, 0f, 0f);
+            Vector3 anchor = PreviewRigOrigin + new Vector3(0f, 0f, index * SpacingZ);
 
             // パーツを配置
             var inst = Object.Instantiate(def.prefab, anchor + def.spawnOffset, Quaternion.identity, rigRoot.transform);
@@ -54,24 +56,27 @@ namespace StageMaker
             DisableGameLogic(inst);
             SetLayerRecursive(inst, PreviewLayer);
 
-            // バウンディングボックスを使ってフィッティング
+            // バウンディングボックス (Renderer 由来)。極端に大きい場合は丸める。
             Bounds b = ComputeBounds(inst, anchor);
-            float radius = Mathf.Max(b.extents.magnitude, 0.5f);
+            float radius = Mathf.Clamp(b.extents.magnitude, 0.4f, 4f);
 
             // 専用カメラ
             var camGo = new GameObject("PreviewCam_" + def.id);
             camGo.transform.SetParent(rigRoot.transform, false);
+            // 視点ベクトル: 上から斜めに 3D 感を出す
             Vector3 dir = new Vector3(0.6f, 0.7f, -1f).normalized;
-            camGo.transform.position = b.center + dir * (radius * 3.2f);
+            float camDist = radius * 3.2f;
+            camGo.transform.position = b.center + dir * camDist;
             camGo.transform.LookAt(b.center);
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.08f, 0.11f, 0.20f, 1f);
             cam.fieldOfView = 35f;
-            cam.nearClipPlane = 0.05f;
-            cam.farClipPlane = 200f;
+            // near/far はターゲット周りだけにすることで、Z 方向に並んだ隣のパーツを描画しない
+            cam.nearClipPlane = Mathf.Max(0.05f, camDist - radius - 1f);
+            cam.farClipPlane  = camDist + radius + 1f;
             cam.cullingMask = 1 << PreviewLayer;
-            cam.depth = -100; // メインカメラより先に処理
+            cam.depth = -100;
 
             var rt = new RenderTexture(TexSize, TexSize, 16, RenderTextureFormat.ARGB32);
             rt.name = "PaletteRT_" + def.id;
@@ -111,6 +116,8 @@ namespace StageMaker
             Bounds b = renderers[0].bounds;
             for (int i = 1; i < renderers.Length; i++)
             {
+                // ParticleSystem の bounds は無限のような巨大値をとることがあるので除外
+                if (renderers[i] is ParticleSystemRenderer) { continue; }
                 b.Encapsulate(renderers[i].bounds);
             }
             return b;
