@@ -2,30 +2,30 @@ public class GamePauseState : IGameState
 {
     public void OnEnter(GameStateMachine context)
     {
-        // ƒ|[ƒYUI‚ğ•\¦‚·‚é
+        // ï¿½|ï¿½[ï¿½YUIï¿½ï¿½\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         context.PauseCanvas.SetActive(true);
 
-        // ƒ|[ƒYˆ—
+        // ï¿½|ï¿½[ï¿½Yï¿½ï¿½ï¿½ï¿½
         PauseUtility.Pause();
     }
 
     public void OnExecute(GameStateMachine context)
     {
-        // ƒ|[ƒY‰ğœ‚Ì“ü—Í‚ğ‘Ò‚Â
+        // ï¿½|ï¿½[ï¿½Yï¿½ï¿½ï¿½ï¿½ï¿½Ì“ï¿½ï¿½Í‚ï¿½Ò‚ï¿½
         if (InputDataManager.Instance.inputData.pause)
         {
-            // ©•ª©g‚ğƒXƒ^ƒbƒN‚©‚ç~‚ë‚·
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½gï¿½ï¿½ï¿½Xï¿½^ï¿½bï¿½Nï¿½ï¿½ï¿½ï¿½~ï¿½ë‚·
             context.PopState();
         }
     }
 
     public void OnExit(GameStateMachine context)
     {
-        // ƒ|[ƒY‰ğœˆ—
+        // ãƒãƒ¼ã‚ºã‚’è§£é™¤ã™ã‚‹
         PauseUtility.Unpause();
 
-        // ƒ|[ƒYUI‚ğ”ñ•\¦‚É‚·‚é
-        context.PauseCanvas.SetActive(false);
+        // ãƒãƒ¼ã‚ºUIã‚’éè¡¨ç¤ºã«ã™ã‚‹ (ãŸã ã— Setting ãƒ¢ãƒ¼ãƒ‰ã§ã¯ ParameterEditor ã‚’è¡¨ç¤ºã—ç¶šã‘ãŸã„ã®ã§æ®‹ã™)
+        context.PauseCanvas.SetActive(context.StageGenerator.IsSettingMode);
     }
 
     public void OnSuspend() { }

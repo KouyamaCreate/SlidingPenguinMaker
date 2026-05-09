@@ -27,7 +27,9 @@ public class GamePlayingState : IGameState
         GradeManager.Instance.SetStageInfo();
 
         context.PlayingCanvas.SetActive(true);
-        context.PauseCanvas.SetActive(false);
+        // ※ Setting シーンでは ParameterEditor が PauseCanvas の子になっているため、
+        //   通常モードでは PauseCanvas を消し、Setting モードでは表示したままにする。
+        context.PauseCanvas.SetActive(context.StageGenerator.IsSettingMode);
         context.CountDownCanvas.SetActive(false);
         context.GameOverCanvas.SetActive(false);
 
@@ -39,7 +41,11 @@ public class GamePlayingState : IGameState
         playerController.Initialize();
 
         timeKeeper = new TimeKeeper(DataManager.Instance.timerData["TimerKeeper"].timeLimit);
-        timeKeeper.StartTime();
+        // Setting シーンではタイマを動かさない (タイムアップで結果画面に飛ばないようにするため)
+        if (!context.StageGenerator.IsSettingMode)
+        {
+            timeKeeper.StartTime();
+        }
 
         playingCanvasManager = context.PlayingCanvas.GetComponent<PlayingCanvasManager>();
         playingCanvasManager.Initialize();
@@ -48,7 +54,7 @@ public class GamePlayingState : IGameState
 
         if (!context.StageGenerator.IsSettingMode)
         {
-            // �������玎�s���J�n���A���O�̋L�^���J�n
+            // �������玎�s���J�n���A���O�̋L�^���J�n
             DataLogger.Instance.StartTrial();
             DataLogger.Instance.StartStream();
         }
@@ -56,7 +62,7 @@ public class GamePlayingState : IGameState
 
     public void OnExecute(GameStateMachine context)
     {
-        // �|�[�Y�̓��͂�҂�
+        // �|�[�Y�̓��͂�҂�
         if (InputDataManager.Instance.inputData.pause)
         {
             context.PushState(new GamePauseState());
