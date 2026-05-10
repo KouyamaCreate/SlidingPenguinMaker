@@ -19,14 +19,45 @@ namespace StageMaker
         private const float SpacingZ = 100f;
         private const int TexSize = 128;
 
+        public class PreviewHandle
+        {
+            public string Id;
+            public RenderTexture Texture;
+            public Transform Target;
+            public Camera Camera;
+            public float HoverAmount;
+        }
+
         private static GameObject rigRoot;
-        private static readonly Dictionary<string, RenderTexture> cache = new Dictionary<string, RenderTexture>();
+        private static readonly Dictionary<string, PreviewHandle> cache = new Dictionary<string, PreviewHandle>();
 
         public static RenderTexture GetPreview(StagePartDefinition def)
         {
+            return GetPreviewHandle(def)?.Texture;
+        }
+
+        public static PreviewHandle GetPreviewHandle(StagePartDefinition def)
+        {
             if (def == null || def.prefab == null) { return null; }
-            if (cache.TryGetValue(def.id, out var rt) && rt != null) { return rt; }
+            if (cache.TryGetValue(def.id, out var handle) && handle?.Texture != null) { return handle; }
             return RenderPart(def);
+        }
+
+        public static void AnimatePreview(string id, bool hovered, float deltaTime)
+        {
+            if (string.IsNullOrEmpty(id)) { return; }
+            if (!cache.TryGetValue(id, out var handle) || handle == null) { return; }
+
+            float target = hovered ? 1f : 0f;
+            handle.HoverAmount = Mathf.MoveTowards(handle.HoverAmount, target, deltaTime * 8f);
+            if (handle.Target != null && handle.HoverAmount > 0.001f)
+            {
+                handle.Target.Rotate(Vector3.up, 90f * deltaTime * handle.HoverAmount, Space.World);
+            }
+            if (handle.Camera != null && handle.Texture != null)
+            {
+                handle.Camera.Render();
+            }
         }
 
         public static void Cleanup()
@@ -38,12 +69,16 @@ namespace StageMaker
             }
             foreach (var kv in cache)
             {
-                if (kv.Value != null) { kv.Value.Release(); Object.Destroy(kv.Value); }
+                if (kv.Value?.Texture != null)
+                {
+                    kv.Value.Texture.Release();
+                    Object.Destroy(kv.Value.Texture);
+                }
             }
             cache.Clear();
         }
 
-        private static RenderTexture RenderPart(StagePartDefinition def)
+        private static PreviewHandle RenderPart(StagePartDefinition def)
         {
             EnsureRig();
             int index = cache.Count;
@@ -70,7 +105,7 @@ namespace StageMaker
             camGo.transform.LookAt(b.center);
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.08f, 0.11f, 0.20f, 1f);
+            cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
             cam.fieldOfView = 35f;
             // near/far はターゲット周りだけにすることで、Z 方向に並んだ隣のパーツを描画しない
             cam.nearClipPlane = Mathf.Max(0.05f, camDist - radius - 1f);
@@ -86,8 +121,16 @@ namespace StageMaker
             // 一度だけレンダリングしたら無効化 (パフォーマンス節約)
             cam.enabled = false;
 
-            cache[def.id] = rt;
-            return rt;
+            var handle = new PreviewHandle
+            {
+                Id = def.id,
+                Texture = rt,
+                Target = inst.transform,
+                Camera = cam,
+                HoverAmount = 0f
+            };
+            cache[def.id] = handle;
+            return handle;
         }
 
         private static void EnsureRig()

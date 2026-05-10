@@ -31,26 +31,38 @@ namespace StageMaker
             // 一覧ビューだけがフルスクリーン背景を持つ (編集ビューでは 3D シーンを見せるため非表示)
             var bg = StageMakerUIFactory.AddRect(gameObject, "Background",
                 new Vector2(0, 0), new Vector2(1, 1), Vector2.zero, Vector2.zero);
-            StageMakerUIFactory.AddImage(bg.gameObject, new Color(0.07f, 0.10f, 0.20f, 1f));
+            StageMakerUIFactory.AddBackgroundImage(bg.gameObject);
 
             // ヘッダ
             var header = StageMakerUIFactory.AddRect(gameObject, "Header",
                 new Vector2(0, 1), new Vector2(1, 1),
-                new Vector2(0, -120), new Vector2(0, 0));
-            StageMakerUIFactory.AddImage(header.gameObject, new Color(0.10f, 0.13f, 0.25f, 1f));
+                new Vector2(32, -118), new Vector2(-32, -18));
+            StageMakerUIFactory.AddPanelImage(header.gameObject, new Color(1f, 1f, 1f, 0.6f));
 
-            StageMakerUIFactory.CreateText(header.gameObject, "Title", "Sliding Penguin Maker",
-                36, Color.white, TextAnchor.MiddleLeft,
+            var title = StageMakerUIFactory.CreateText(header.gameObject, "Title", "SLIDING PENGUIN MAKER",
+                38, StageMakerUIFactory.IceText, TextAnchor.MiddleLeft,
                 new Vector2(0, 0), new Vector2(1, 1));
-            ((RectTransform)header.GetChild(header.childCount - 1)).offsetMin = new Vector2(40, 0);
+            title.fontStyle = FontStyle.Bold;
+            var titleRt = (RectTransform)title.transform;
+            titleRt.offsetMin = new Vector2(126, 0);
+            titleRt.offsetMax = new Vector2(-260, 0);
 
-            // 戻るボタン (タイトルへ)
-            var (backGo, backBtn, _) = StageMakerUIFactory.CreateButton(header.gameObject, "BackButton",
-                "← Title", new Color(0.20f, 0.25f, 0.45f, 1f), Color.white, new Vector2(180, 60));
+            var backGo = new GameObject("BackButton", typeof(RectTransform));
             var backRt = backGo.GetComponent<RectTransform>();
-            backRt.anchorMin = new Vector2(1, 0.5f);
-            backRt.anchorMax = new Vector2(1, 0.5f);
-            backRt.anchoredPosition = new Vector2(-110, 0);
+            backRt.SetParent(header.transform, false);
+            backRt.anchorMin = new Vector2(0, 0.5f);
+            backRt.anchorMax = new Vector2(0, 0.5f);
+            backRt.sizeDelta = new Vector2(76, 70);
+            backRt.anchoredPosition = new Vector2(70, 0);
+            var backHit = backGo.AddComponent<Image>();
+            backHit.color = new Color(1f, 1f, 1f, 0f);
+            backHit.raycastTarget = true;
+            var backBtn = backGo.AddComponent<Button>();
+            backBtn.targetGraphic = backHit;
+            var backLabel = StageMakerUIFactory.CreateText(backGo, "Label", "←",
+                52, StageMakerUIFactory.IceText, TextAnchor.MiddleCenter,
+                Vector2.zero, Vector2.one);
+            backLabel.fontStyle = FontStyle.Bold;
             backBtn.onClick.AddListener(() => controller.BackToTitle());
 
             // 一覧スクロール領域
@@ -59,11 +71,11 @@ namespace StageMaker
             scrollRt.SetParent(transform, false);
             scrollRt.anchorMin = new Vector2(0, 0);
             scrollRt.anchorMax = new Vector2(1, 1);
-            scrollRt.offsetMin = new Vector2(60, 100);
-            scrollRt.offsetMax = new Vector2(-60, -140);
+            scrollRt.offsetMin = new Vector2(64, 116);
+            scrollRt.offsetMax = new Vector2(-64, -146);
 
             var scrollImage = scrollGo.AddComponent<Image>();
-            scrollImage.color = new Color(0.05f, 0.07f, 0.15f, 0.6f);
+            StageMakerUIFactory.StylePanelImage(scrollImage, new Color(1f, 1f, 1f, 0.6f));
             var scrollRect = scrollGo.AddComponent<ScrollRect>();
             scrollRect.horizontal = false;
             scrollRect.vertical = true;
@@ -91,8 +103,8 @@ namespace StageMaker
             scrollRect.content = listContent;
 
             var vlayout = contentGo.AddComponent<VerticalLayoutGroup>();
-            vlayout.padding = new RectOffset(20, 20, 20, 20);
-            vlayout.spacing = 12;
+            vlayout.padding = new RectOffset(30, 30, 30, 30);
+            vlayout.spacing = 6;
             vlayout.childAlignment = TextAnchor.UpperCenter;
             vlayout.childControlHeight = false;
             vlayout.childControlWidth = true;
@@ -111,11 +123,11 @@ namespace StageMaker
         {
             // 新規作成ボタン (中央)
             var (newGo, newBtn, _) = StageMakerUIFactory.CreateButton(gameObject, "NewStageButton",
-                "+ New Stage", new Color(0.20f, 0.55f, 0.30f, 1f), Color.white, new Vector2(260, 70));
+                "NEW STAGE", Color.white, StageMakerUIFactory.IceText, new Vector2(280, 72));
             var newRt = newGo.GetComponent<RectTransform>();
             newRt.anchorMin = new Vector2(0.5f, 0);
             newRt.anchorMax = new Vector2(0.5f, 0);
-            newRt.anchoredPosition = new Vector2(0, 60);
+            newRt.anchoredPosition = new Vector2(0, 64);
             newBtn.onClick.AddListener(() =>
             {
                 var newData = CustomStageData.CreateNew("New Stage");
@@ -124,32 +136,14 @@ namespace StageMaker
 
             // Import ボタン (左)
             var (importGo, importBtn, _) = StageMakerUIFactory.CreateButton(gameObject, "ImportButton",
-                "Import", new Color(0.30f, 0.45f, 0.65f, 1f), Color.white, new Vector2(160, 60));
+                "IMPORT", Color.white, StageMakerUIFactory.IceText, new Vector2(180, 60));
             var importRt = importGo.GetComponent<RectTransform>();
             importRt.anchorMin = new Vector2(0.5f, 0);
             importRt.anchorMax = new Vector2(0.5f, 0);
-            importRt.anchoredPosition = new Vector2(-220, 60);
+            importRt.anchoredPosition = new Vector2(-252, 64);
             importBtn.onClick.AddListener(() =>
             {
-                int count = CustomStageRepository.ImportFromFolder();
-                ShowStatus(count > 0
-                    ? $"Imported {count} stage(s) from {CustomStageRepository.GetImportFolderPath()}"
-                    : $"No JSON found in {CustomStageRepository.GetImportFolderPath()} (open and drop files there).");
-                controller.ReloadStages();
-                controller.ShowList();
-            });
-
-            // Open Folder ボタン (右) — エクスポート/インポート両フォルダの親を開く
-            var (openGo, openBtn, _) = StageMakerUIFactory.CreateButton(gameObject, "OpenFolderButton",
-                "Open Folder", new Color(0.45f, 0.40f, 0.55f, 1f), Color.white, new Vector2(160, 60));
-            var openRt = openGo.GetComponent<RectTransform>();
-            openRt.anchorMin = new Vector2(0.5f, 0);
-            openRt.anchorMax = new Vector2(0.5f, 0);
-            openRt.anchoredPosition = new Vector2(220, 60);
-            openBtn.onClick.AddListener(() =>
-            {
-                CustomStageRepository.OpenFolderInOS(CustomStageRepository.GetExportFolderPath());
-                CustomStageRepository.OpenFolderInOS(CustomStageRepository.GetImportFolderPath());
+                StageMakerFilePicker.PickJson(this, ImportJson, ShowStatus);
             });
 
             // ステータス表示テキスト (フッタ下)
@@ -164,7 +158,7 @@ namespace StageMaker
             statusText = statusGo.AddComponent<Text>();
             statusText.font = StageMakerUIFactory.GetFont();
             statusText.fontSize = 14;
-            statusText.color = new Color(0.85f, 0.92f, 1f, 1f);
+            statusText.color = StageMakerUIFactory.IceText;
             statusText.alignment = TextAnchor.MiddleCenter;
             statusText.horizontalOverflow = HorizontalWrapMode.Overflow;
             statusText.text = "";
@@ -176,6 +170,25 @@ namespace StageMaker
             Debug.Log("[StageMakerListView] " + msg);
         }
 
+        private void ImportJson(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                ShowStatus("Import canceled.");
+                return;
+            }
+
+            if (!CustomStageRepository.ImportFromJson(json))
+            {
+                ShowStatus("Import failed: invalid stage JSON.");
+                return;
+            }
+
+            ShowStatus("Imported stage.");
+            controller.ReloadStages();
+            controller.ShowList();
+        }
+
         public void Refresh(List<CustomStageData> customStages)
         {
             // 既存の行を削除
@@ -184,41 +197,63 @@ namespace StageMaker
                 Destroy(listContent.GetChild(i).gameObject);
             }
 
-            // デフォルトステージを表示
+            bool needsDivider = false;
             foreach (var (type, label) in DefaultStages)
             {
+                if (needsDivider) { CreateDivider(); }
                 CreateDefaultRow(label, type);
+                needsDivider = true;
             }
 
-            // 自作ステージを表示
             foreach (var data in customStages)
             {
+                if (needsDivider) { CreateDivider(); }
                 CreateCustomRow(data);
+                needsDivider = true;
             }
+        }
+
+        private void CreateDivider()
+        {
+            var dividerGo = new GameObject("Divider", typeof(RectTransform));
+            var dividerRt = dividerGo.GetComponent<RectTransform>();
+            dividerRt.SetParent(listContent, false);
+            dividerRt.sizeDelta = new Vector2(0, 2);
+
+            var lineGo = new GameObject("Line", typeof(RectTransform));
+            var lineRt = lineGo.GetComponent<RectTransform>();
+            lineRt.SetParent(dividerGo.transform, false);
+            lineRt.anchorMin = new Vector2(0, 0.5f);
+            lineRt.anchorMax = new Vector2(1, 0.5f);
+            lineRt.offsetMin = new Vector2(20, -0.75f);
+            lineRt.offsetMax = new Vector2(-10, 0.75f);
+            var line = lineGo.AddComponent<Image>();
+            line.color = new Color(1f, 1f, 1f, 0.36f);
+            line.raycastTarget = false;
         }
 
         private void CreateDefaultRow(string label, StageType type)
         {
-            var row = CreateRowBase(label, "Default", new Color(0.18f, 0.22f, 0.32f, 1f));
-            CreateRowButton(row, "Play", new Color(0.20f, 0.50f, 0.85f, 1f),
+            var row = CreateRowBase(label, "Default");
+            CreateRowButton(row, "PLAY", Color.white,
                 () => controller.PlayDefaultStage(type));
         }
 
         private void CreateCustomRow(CustomStageData data)
         {
             string subTitle = $"Custom · {data.parts.Count} parts";
-            var row = CreateRowBase(data.displayName, subTitle, new Color(0.20f, 0.30f, 0.42f, 1f));
-            CreateRowButton(row, "Edit", new Color(0.50f, 0.55f, 0.20f, 1f),
+            var row = CreateRowBase(data.displayName, subTitle);
+            CreateRowButton(row, "EDIT", Color.white,
                 () => controller.EnterEditor(data));
-            CreateRowButton(row, "Play", new Color(0.20f, 0.50f, 0.85f, 1f),
+            CreateRowButton(row, "PLAY", Color.white,
                 () => controller.PlayCustomStage(data.id));
-            CreateRowButton(row, "Export", new Color(0.30f, 0.45f, 0.65f, 1f),
+            CreateRowButton(row, "EXPORT", Color.white,
                 () =>
                 {
                     string path = CustomStageRepository.Export(data);
                     ShowStatus(string.IsNullOrEmpty(path) ? "Export failed." : "Exported to: " + path);
                 });
-            CreateRowButton(row, "Delete", new Color(0.65f, 0.20f, 0.20f, 1f),
+            CreateRowButton(row, "DELETE", Color.white,
                 () =>
                 {
                     CustomStageRepository.Delete(data.id);
@@ -227,15 +262,12 @@ namespace StageMaker
                 });
         }
 
-        private GameObject CreateRowBase(string title, string subtitle, Color bg)
+        private GameObject CreateRowBase(string title, string subtitle)
         {
             var rowGo = new GameObject(title, typeof(RectTransform));
             var rowRt = rowGo.GetComponent<RectTransform>();
             rowRt.SetParent(listContent, false);
             rowRt.sizeDelta = new Vector2(0, 90);
-
-            var img = rowGo.AddComponent<Image>();
-            img.color = bg;
 
             // タイトルテキスト
             var titleGo = new GameObject("Title", typeof(RectTransform));
@@ -249,8 +281,10 @@ namespace StageMaker
             titleText.font = StageMakerUIFactory.GetFont();
             titleText.text = title;
             titleText.fontSize = 26;
-            titleText.color = Color.white;
+            titleText.fontStyle = FontStyle.Bold;
+            titleText.color = StageMakerUIFactory.IceText;
             titleText.alignment = TextAnchor.LowerLeft;
+            titleText.horizontalOverflow = HorizontalWrapMode.Overflow;
 
             // サブタイトル
             var subGo = new GameObject("Subtitle", typeof(RectTransform));
@@ -264,7 +298,7 @@ namespace StageMaker
             subText.font = StageMakerUIFactory.GetFont();
             subText.text = subtitle;
             subText.fontSize = 16;
-            subText.color = new Color(0.78f, 0.84f, 0.96f, 1f);
+            subText.color = new Color(0.86f, 0.95f, 1f, 1f);
             subText.alignment = TextAnchor.UpperLeft;
 
             // ボタン用 HorizontalLayoutGroup
@@ -289,7 +323,7 @@ namespace StageMaker
 
         private void CreateRowButton(GameObject parent, string label, Color color, System.Action onClick)
         {
-            var (go, btn, _) = StageMakerUIFactory.CreateButton(parent, label, label, color, Color.white, new Vector2(110, 60));
+            var (go, btn, _) = StageMakerUIFactory.CreateButton(parent, label, label, color, StageMakerUIFactory.IceText, new Vector2(116, 58));
             btn.onClick.AddListener(() => onClick?.Invoke());
         }
     }

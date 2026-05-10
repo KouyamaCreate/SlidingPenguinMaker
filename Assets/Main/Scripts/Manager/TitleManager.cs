@@ -27,15 +27,15 @@ public class TitleManager : MonoBehaviour
         var go = new GameObject("StageMakerButton", typeof(RectTransform));
         var rt = go.GetComponent<RectTransform>();
         rt.SetParent(canvas.transform, false);
-        // 既存の StartButton (右下) / SettingButton (右上) と重ならない左下に配置する
+        // タイトルの左端と、既存 StartButton の下端に揃える。
         rt.anchorMin = new Vector2(0, 0);
         rt.anchorMax = new Vector2(0, 0);
         rt.pivot = new Vector2(0, 0);
-        rt.anchoredPosition = new Vector2(30, 30);
-        rt.sizeDelta = new Vector2(260, 70);
+        rt.anchoredPosition = new Vector2(30, 58);
+        rt.sizeDelta = new Vector2(190, 54);
 
         var img = go.AddComponent<Image>();
-        img.color = new Color(0.20f, 0.55f, 0.30f, 1f);
+        StageMakerUIFactory.StyleButtonImage(img, Color.white);
 
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = img;
@@ -49,10 +49,14 @@ public class TitleManager : MonoBehaviour
         labelRt.offsetMax = Vector2.zero;
         var label = labelGo.AddComponent<Text>();
         label.font = StageMakerUIFactory.GetFont();
-        label.text = "Stage Maker";
-        label.fontSize = 24;
-        label.color = Color.white;
+        label.text = "STAGE MAKER";
+        label.fontSize = 20;
+        label.fontStyle = FontStyle.Bold;
+        label.color = StageMakerUIFactory.IceText;
         label.alignment = TextAnchor.MiddleCenter;
+        label.resizeTextForBestFit = true;
+        label.resizeTextMinSize = 12;
+        label.resizeTextMaxSize = 20;
 
         btn.onClick.AddListener(OnStageMakerButtonClicked);
     }

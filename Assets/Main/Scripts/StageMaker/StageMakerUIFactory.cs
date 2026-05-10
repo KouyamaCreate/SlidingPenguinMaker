@@ -9,7 +9,19 @@ namespace StageMaker
     /// </summary>
     public static class StageMakerUIFactory
     {
+        private const string BackgroundSpritePath = "StageMaker/UI/StageMakerBackground";
+        private const string ButtonSpritePath = "StageMaker/UI/StageMakerButton";
+        private const string EraserIconSpritePath = "StageMaker/UI/EraserIcon";
+        private const string PanelSpritePath = "StageMaker/UI/StageMakerPanel";
+
         public static Font defaultFont;
+        private static Sprite backgroundSprite;
+        private static Sprite buttonSprite;
+        private static Sprite eraserIconSprite;
+        private static Sprite panelSprite;
+
+        public static readonly Color TitleBlue = new Color(0.02f, 0.35f, 0.95f, 1f);
+        public static readonly Color IceText = new Color(0.96f, 1f, 1f, 1f);
 
         public static Font GetFont()
         {
@@ -20,6 +32,33 @@ namespace StageMaker
                 defaultFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
             }
             return defaultFont;
+        }
+
+        public static Sprite GetBackgroundSprite()
+        {
+            return LoadSprite(ref backgroundSprite, BackgroundSpritePath);
+        }
+
+        public static Sprite GetButtonSprite()
+        {
+            return LoadSprite(ref buttonSprite, ButtonSpritePath);
+        }
+
+        public static Sprite GetPanelSprite()
+        {
+            return LoadSprite(ref panelSprite, PanelSpritePath);
+        }
+
+        public static Sprite GetEraserIconSprite()
+        {
+            return LoadSprite(ref eraserIconSprite, EraserIconSpritePath);
+        }
+
+        private static Sprite LoadSprite(ref Sprite cache, string path)
+        {
+            if (cache != null) { return cache; }
+            cache = Resources.Load<Sprite>(path);
+            return cache;
         }
 
         public static GameObject CreateCanvas(string name, int sortingOrder)
@@ -49,13 +88,73 @@ namespace StageMaker
             return rt;
         }
 
-        public static Image AddImage(GameObject target, Color color)
+        public static Image AddImage(GameObject target, Color color, bool raycastTarget = true)
         {
             var img = target.GetComponent<Image>();
             if (img == null) { img = target.AddComponent<Image>(); }
             img.color = color;
-            img.raycastTarget = true;
+            img.raycastTarget = raycastTarget;
             return img;
+        }
+
+        public static Image AddBackgroundImage(GameObject target, float alpha = 1f)
+        {
+            var img = target.GetComponent<Image>();
+            if (img == null) { img = target.AddComponent<Image>(); }
+            var sprite = GetBackgroundSprite();
+            if (sprite != null)
+            {
+                img.sprite = sprite;
+                img.type = Image.Type.Simple;
+                img.color = new Color(1f, 1f, 1f, alpha);
+                img.preserveAspect = false;
+            }
+            else
+            {
+                img.color = new Color(0.02f, 0.35f, 0.95f, alpha);
+            }
+            img.raycastTarget = false;
+            return img;
+        }
+
+        public static Image AddPanelImage(GameObject target, Color tint, bool raycastTarget = true)
+        {
+            var img = target.GetComponent<Image>();
+            if (img == null) { img = target.AddComponent<Image>(); }
+            StylePanelImage(img, tint, raycastTarget);
+            return img;
+        }
+
+        public static void StylePanelImage(Image img, Color tint, bool raycastTarget = true)
+        {
+            var sprite = GetPanelSprite();
+            if (sprite != null)
+            {
+                img.sprite = sprite;
+                img.type = Image.Type.Sliced;
+                img.color = new Color(1f, 1f, 1f, tint.a);
+            }
+            else
+            {
+                img.color = tint;
+            }
+            img.raycastTarget = raycastTarget;
+        }
+
+        public static void StyleButtonImage(Image img, Color tint)
+        {
+            var sprite = GetButtonSprite();
+            if (sprite != null)
+            {
+                img.sprite = sprite;
+                img.type = Image.Type.Sliced;
+                img.color = new Color(1f, 1f, 1f, tint.a);
+            }
+            else
+            {
+                img.color = tint;
+            }
+            img.raycastTarget = true;
         }
 
         public static (GameObject go, Button button, Text label) CreateButton(GameObject parent, string name, string text, Color bg, Color textColor, Vector2 size)
@@ -67,9 +166,10 @@ namespace StageMaker
             rt.localScale = Vector3.one;
 
             var img = go.AddComponent<Image>();
-            img.color = bg;
+            StyleButtonImage(img, bg);
 
             var btn = go.AddComponent<Button>();
+            btn.targetGraphic = img;
 
             var labelGo = new GameObject("Label", typeof(RectTransform));
             var labelRt = labelGo.GetComponent<RectTransform>();
@@ -85,7 +185,11 @@ namespace StageMaker
             labelText.alignment = TextAnchor.MiddleCenter;
             labelText.color = textColor;
             labelText.fontSize = 22;
+            labelText.fontStyle = FontStyle.Bold;
             labelText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            labelText.resizeTextForBestFit = true;
+            labelText.resizeTextMinSize = 12;
+            labelText.resizeTextMaxSize = 24;
 
             return (go, btn, labelText);
         }

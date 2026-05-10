@@ -181,7 +181,19 @@ namespace StageMaker
         {
             try
             {
-                string json = File.ReadAllText(filePath);
+                return ImportFromJson(File.ReadAllText(filePath));
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[CustomStageRepository] ImportFromFile failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        public static bool ImportFromJson(string json)
+        {
+            try
+            {
                 var data = CustomStageData.FromJson(json);
                 if (data == null) { return false; }
                 if (string.IsNullOrEmpty(data.id)) { data.id = Guid.NewGuid().ToString("N"); }
@@ -195,7 +207,7 @@ namespace StageMaker
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[CustomStageRepository] ImportFromFile failed: {ex.Message}");
+                Debug.LogError($"[CustomStageRepository] ImportFromJson failed: {ex.Message}");
                 return false;
             }
         }

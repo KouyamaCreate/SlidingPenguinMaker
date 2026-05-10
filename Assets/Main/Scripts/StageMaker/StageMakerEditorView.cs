@@ -12,6 +12,8 @@ namespace StageMaker
     public class StageMakerEditorView : MonoBehaviour
     {
         public const string EraserId = "__eraser__";
+        private const float PaletteWidth = 640f;
+        private const float StageCameraXOffset = -22f;
 
         // パレットに表示しない (= ユーザが配置できない) 内部パーツ
         // Start / Goal は固定位置・Shark は周辺の海に自動配置
@@ -27,6 +29,7 @@ namespace StageMaker
         private InputField nameField;
         private GameObject paletteContent;
         private readonly Dictionary<string, Image> paletteSelectionFrame = new();
+        private readonly List<RaycastResult> uiRaycastResults = new();
         private bool eraserMode;
         private string selectedPartId;   // クリックで配置するためのカレント選択
         public bool IsEraserMode => eraserMode;
@@ -60,15 +63,25 @@ namespace StageMaker
         {
             // ヘッダ (戻る + ステージ名 + 保存 + プレイ)
             var header = StageMakerUIFactory.AddRect(gameObject, "Header",
-                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -100), new Vector2(0, 0)).gameObject;
-            StageMakerUIFactory.AddImage(header, new Color(0.10f, 0.13f, 0.25f, 1f));
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(32, -102), new Vector2(-32, -16)).gameObject;
+            StageMakerUIFactory.AddPanelImage(header, new Color(1f, 1f, 1f, 0.6f));
 
-            var (backGo, backBtn, _) = StageMakerUIFactory.CreateButton(header, "BackButton",
-                "← Back", new Color(0.20f, 0.25f, 0.45f, 1f), Color.white, new Vector2(140, 60));
+            var backGo = new GameObject("BackButton", typeof(RectTransform));
             var backRt = backGo.GetComponent<RectTransform>();
+            backRt.SetParent(header.transform, false);
             backRt.anchorMin = new Vector2(0, 0.5f);
             backRt.anchorMax = new Vector2(0, 0.5f);
-            backRt.anchoredPosition = new Vector2(90, 0);
+            backRt.sizeDelta = new Vector2(76, 70);
+            backRt.anchoredPosition = new Vector2(70, 5);
+            var backHit = backGo.AddComponent<Image>();
+            backHit.color = new Color(1f, 1f, 1f, 0f);
+            backHit.raycastTarget = true;
+            var backBtn = backGo.AddComponent<Button>();
+            backBtn.targetGraphic = backHit;
+            var backLabel = StageMakerUIFactory.CreateText(backGo, "Label", "←",
+                52, StageMakerUIFactory.IceText, TextAnchor.MiddleCenter,
+                Vector2.zero, Vector2.one);
+            backLabel.fontStyle = FontStyle.Bold;
             backBtn.onClick.AddListener(() => controller.ShowList());
 
             // 名前入力
@@ -78,9 +91,9 @@ namespace StageMaker
             nameRt.anchorMin = new Vector2(0, 0.5f);
             nameRt.anchorMax = new Vector2(0, 0.5f);
             nameRt.anchoredPosition = new Vector2(420, 0);
-            nameRt.sizeDelta = new Vector2(380, 60);
+            nameRt.sizeDelta = new Vector2(420, 58);
             var nameImg = nameGo.AddComponent<Image>();
-            nameImg.color = new Color(0.94f, 0.96f, 1f, 1f);
+            nameImg.color = new Color(0.90f, 0.99f, 1f, 0.48f);
             nameField = nameGo.AddComponent<InputField>();
 
             var nameTextGo = new GameObject("Text", typeof(RectTransform));
@@ -104,27 +117,26 @@ namespace StageMaker
 
             // 保存ボタン
             var (saveGo, saveBtn, _) = StageMakerUIFactory.CreateButton(header, "SaveButton",
-                "Save", new Color(0.20f, 0.55f, 0.30f, 1f), Color.white, new Vector2(150, 60));
+                "SAVE", Color.white, StageMakerUIFactory.IceText, new Vector2(132, 52));
             var saveRt = saveGo.GetComponent<RectTransform>();
             saveRt.anchorMin = new Vector2(1, 0.5f);
             saveRt.anchorMax = new Vector2(1, 0.5f);
-            saveRt.anchoredPosition = new Vector2(-330, 0);
+            saveRt.anchoredPosition = new Vector2(-286, 0);
             saveBtn.onClick.AddListener(SaveCurrent);
 
             // プレイ (即反映) ボタン
             var (playGo, playBtn, _) = StageMakerUIFactory.CreateButton(header, "PlayButton",
-                "Play", new Color(0.20f, 0.50f, 0.85f, 1f), Color.white, new Vector2(160, 60));
+                "PLAY", Color.white, StageMakerUIFactory.IceText, new Vector2(140, 52));
             var playRt = playGo.GetComponent<RectTransform>();
             playRt.anchorMin = new Vector2(1, 0.5f);
             playRt.anchorMax = new Vector2(1, 0.5f);
-            playRt.anchoredPosition = new Vector2(-150, 0);
+            playRt.anchoredPosition = new Vector2(-128, 0);
             playBtn.onClick.AddListener(SaveAndPlay);
 
             // パレット
             BuildPalette();
 
-            // クリア / カメラ操作のフッタ
-            BuildFooter();
+            // クリアボタンは置かず、パーツパレットに縦の余白を回す。
         }
 
         private void BuildPalette()
@@ -135,64 +147,122 @@ namespace StageMaker
             paletteRt.anchorMin = new Vector2(0, 0);
             paletteRt.anchorMax = new Vector2(0, 1);
             paletteRt.pivot = new Vector2(0, 0.5f);
-            paletteRt.offsetMin = new Vector2(20, 80);
+            paletteRt.offsetMin = new Vector2(24, 24);
             paletteRt.offsetMax = new Vector2(0, -120);
-            paletteRt.sizeDelta = new Vector2(280, paletteRt.sizeDelta.y);
+            paletteRt.sizeDelta = new Vector2(PaletteWidth, paletteRt.sizeDelta.y);
             var paletteImg = paletteGo.AddComponent<Image>();
-            paletteImg.color = new Color(0.05f, 0.07f, 0.15f, 0.7f);
+            StageMakerUIFactory.StylePanelImage(paletteImg, new Color(1f, 1f, 1f, 0.6f));
 
-            // タイトル
-            var titleText = StageMakerUIFactory.CreateText(paletteGo, "PaletteTitle", "Parts",
-                20, Color.white, TextAnchor.MiddleCenter, new Vector2(0, 1), new Vector2(1, 1));
-            ((RectTransform)titleText.transform).offsetMin = new Vector2(0, -40);
+            var scrollGo = new GameObject("PartScrollView", typeof(RectTransform));
+            var scrollRt = scrollGo.GetComponent<RectTransform>();
+            scrollRt.SetParent(paletteGo.transform, false);
+            scrollRt.anchorMin = Vector2.zero;
+            scrollRt.anchorMax = Vector2.one;
+            scrollRt.offsetMin = new Vector2(28, 36);
+            scrollRt.offsetMax = new Vector2(-28, -36);
+            var scrollRect = scrollGo.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollGo.AddComponent<RectMask2D>();
 
-            // 消しゴム (専用枠)
-            BuildEraserSlot(paletteGo);
+            var viewportGo = new GameObject("Viewport", typeof(RectTransform));
+            var viewportRt = viewportGo.GetComponent<RectTransform>();
+            viewportRt.SetParent(scrollGo.transform, false);
+            viewportRt.anchorMin = Vector2.zero;
+            viewportRt.anchorMax = Vector2.one;
+            viewportRt.offsetMin = Vector2.zero;
+            viewportRt.offsetMax = Vector2.zero;
+            scrollRect.viewport = viewportRt;
 
-            // パーツ一覧 (Vertical Layout)
             var contentGo = new GameObject("Content", typeof(RectTransform));
             paletteContent = contentGo;
             var contentRt = contentGo.GetComponent<RectTransform>();
-            contentRt.SetParent(paletteGo.transform, false);
-            contentRt.anchorMin = new Vector2(0, 0);
+            contentRt.SetParent(viewportGo.transform, false);
+            contentRt.anchorMin = new Vector2(0, 1);
             contentRt.anchorMax = new Vector2(1, 1);
-            contentRt.offsetMin = new Vector2(8, 8);
-            contentRt.offsetMax = new Vector2(-8, -110);
+            contentRt.pivot = new Vector2(0.5f, 1);
+            contentRt.anchoredPosition = Vector2.zero;
+            contentRt.sizeDelta = Vector2.zero;
+            scrollRect.content = contentRt;
+
             var vlayout = contentGo.AddComponent<VerticalLayoutGroup>();
             vlayout.padding = new RectOffset(8, 8, 8, 8);
-            vlayout.spacing = 6;
+            vlayout.spacing = 18;
+            vlayout.childAlignment = TextAnchor.UpperCenter;
             vlayout.childControlHeight = false;
             vlayout.childControlWidth = true;
             vlayout.childForceExpandHeight = false;
             vlayout.childForceExpandWidth = true;
 
+            var fitter = contentGo.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var visibleParts = new List<StagePartDefinition>();
             if (catalog != null)
             {
                 foreach (var def in catalog.Parts)
                 {
                     if (def == null) continue;
                     if (InternalPartIds.Contains(def.id)) { continue; }
-                    CreatePartRow(def);
+                    visibleParts.Add(def);
                 }
+            }
+
+            for (int i = 0; i < visibleParts.Count; i += 3)
+            {
+                int remaining = visibleParts.Count - i;
+                var row = CreatePaletteRow();
+                CreatePartRow(row, visibleParts[i]);
+
+                if (remaining >= 2)
+                {
+                    CreatePartRow(row, visibleParts[i + 1]);
+                }
+                if (remaining >= 3)
+                {
+                    CreatePartRow(row, visibleParts[i + 2]);
+                }
+                else
+                {
+                    BuildEraserSlot(row, columns: Mathf.Max(1, 3 - remaining));
+                }
+            }
+
+            if (visibleParts.Count % 3 == 0)
+            {
+                var row = CreatePaletteRow();
+                BuildEraserSlot(row, columns: 3);
             }
         }
 
-        private void BuildEraserSlot(GameObject parent)
+        private GameObject CreatePaletteRow()
+        {
+            var rowGo = new GameObject("PaletteRow", typeof(RectTransform));
+            var rowRt = rowGo.GetComponent<RectTransform>();
+            rowRt.SetParent(paletteContent.transform, false);
+            rowRt.sizeDelta = new Vector2(0, 150);
+
+            var layout = rowGo.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 16;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            return rowGo;
+        }
+
+        private void BuildEraserSlot(GameObject parent, int columns)
         {
             var rowGo = new GameObject("EraserSlot", typeof(RectTransform));
             var rowRt = rowGo.GetComponent<RectTransform>();
             rowRt.SetParent(parent.transform, false);
-            rowRt.anchorMin = new Vector2(0, 1);
-            rowRt.anchorMax = new Vector2(1, 1);
-            rowRt.pivot = new Vector2(0.5f, 1);
-            rowRt.anchoredPosition = new Vector2(0, -42);
-            rowRt.offsetMin = new Vector2(8, rowRt.offsetMin.y);
-            rowRt.offsetMax = new Vector2(-8, rowRt.offsetMax.y);
-            rowRt.sizeDelta = new Vector2(rowRt.sizeDelta.x, 60);
+            rowRt.sizeDelta = new Vector2(176 * columns + 16 * (columns - 1), 150);
 
             var bgImg = rowGo.AddComponent<Image>();
-            bgImg.color = new Color(0.40f, 0.20f, 0.20f, 1f);
-            bgImg.raycastTarget = true;
+            StageMakerUIFactory.StyleButtonImage(bgImg, Color.white);
+            var button = rowGo.AddComponent<Button>();
+            button.targetGraphic = bgImg;
 
             // 選択枠
             var frameGo = new GameObject("Frame", typeof(RectTransform));
@@ -200,57 +270,39 @@ namespace StageMaker
             frameRt.SetParent(rowGo.transform, false);
             frameRt.anchorMin = Vector2.zero;
             frameRt.anchorMax = Vector2.one;
-            frameRt.offsetMin = new Vector2(2, 2);
-            frameRt.offsetMax = new Vector2(-2, -2);
+            frameRt.offsetMin = Vector2.zero;
+            frameRt.offsetMax = Vector2.zero;
             var frameImg = frameGo.AddComponent<Image>();
             frameImg.color = new Color(1, 1, 1, 0);
             frameImg.raycastTarget = false;
             paletteSelectionFrame[EraserId] = frameImg;
 
-            // 消しゴムアイコン (UnityEngineの組み込み画像が無いので、絵文字 ✕ で代用)
             var iconGo = new GameObject("Icon", typeof(RectTransform));
             var iconRt = iconGo.GetComponent<RectTransform>();
             iconRt.SetParent(rowGo.transform, false);
-            iconRt.anchorMin = new Vector2(0, 0);
-            iconRt.anchorMax = new Vector2(0.4f, 1);
-            iconRt.offsetMin = new Vector2(8, 4);
-            iconRt.offsetMax = new Vector2(-4, -4);
-            var iconText = iconGo.AddComponent<Text>();
-            iconText.font = StageMakerUIFactory.GetFont();
-            iconText.text = "✕"; // ✕
-            iconText.fontSize = 36;
-            iconText.color = Color.white;
-            iconText.alignment = TextAnchor.MiddleCenter;
-            iconText.raycastTarget = false;
-
-            var labelGo = new GameObject("Label", typeof(RectTransform));
-            var labelRt = labelGo.GetComponent<RectTransform>();
-            labelRt.SetParent(rowGo.transform, false);
-            labelRt.anchorMin = new Vector2(0.4f, 0);
-            labelRt.anchorMax = new Vector2(1, 1);
-            labelRt.offsetMin = new Vector2(0, 0);
-            labelRt.offsetMax = new Vector2(-8, 0);
-            var labelText = labelGo.AddComponent<Text>();
-            labelText.font = StageMakerUIFactory.GetFont();
-            labelText.text = "Eraser";
-            labelText.fontSize = 18;
-            labelText.color = Color.white;
-            labelText.alignment = TextAnchor.MiddleLeft;
-            labelText.raycastTarget = false;
+            iconRt.anchorMin = new Vector2(0.5f, 0.5f);
+            iconRt.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRt.sizeDelta = new Vector2(82, 82);
+            iconRt.anchoredPosition = Vector2.zero;
+            var icon = iconGo.AddComponent<Image>();
+            icon.sprite = StageMakerUIFactory.GetEraserIconSprite();
+            icon.color = StageMakerUIFactory.IceText;
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
 
             var handler = rowGo.AddComponent<PaletteDragHandler>();
             handler.Initialize(this, EraserId);
         }
 
-        private void CreatePartRow(StagePartDefinition def)
+        private void CreatePartRow(GameObject parent, StagePartDefinition def)
         {
             var rowGo = new GameObject(def.id, typeof(RectTransform));
             var rowRt = rowGo.GetComponent<RectTransform>();
-            rowRt.SetParent(paletteContent.transform, false);
-            rowRt.sizeDelta = new Vector2(0, 70);
+            rowRt.SetParent(parent.transform, false);
+            rowRt.sizeDelta = new Vector2(176, 150);
 
             var bgImg = rowGo.AddComponent<Image>();
-            bgImg.color = new Color(0.18f, 0.22f, 0.32f, 1f);
+            bgImg.color = new Color(1f, 1f, 1f, 0f);
             bgImg.raycastTarget = true;
 
             // 選択枠
@@ -259,8 +311,8 @@ namespace StageMaker
             frameRt.SetParent(rowGo.transform, false);
             frameRt.anchorMin = Vector2.zero;
             frameRt.anchorMax = Vector2.one;
-            frameRt.offsetMin = new Vector2(2, 2);
-            frameRt.offsetMax = new Vector2(-2, -2);
+            frameRt.offsetMin = Vector2.zero;
+            frameRt.offsetMax = Vector2.zero;
             var frameImg = frameGo.AddComponent<Image>();
             frameImg.color = new Color(1, 1, 1, 0);
             frameImg.raycastTarget = false;
@@ -270,19 +322,16 @@ namespace StageMaker
             var thumbGo = new GameObject("Thumb", typeof(RectTransform));
             var thumbRt = thumbGo.GetComponent<RectTransform>();
             thumbRt.SetParent(rowGo.transform, false);
-            thumbRt.anchorMin = new Vector2(0, 0);
-            thumbRt.anchorMax = new Vector2(0, 1);
-            thumbRt.pivot = new Vector2(0, 0.5f);
-            thumbRt.anchoredPosition = new Vector2(8, 0);
-            thumbRt.sizeDelta = new Vector2(60, 0);
-            thumbRt.offsetMin = new Vector2(thumbRt.offsetMin.x, 5);
-            thumbRt.offsetMax = new Vector2(thumbRt.offsetMax.x, -5);
+            thumbRt.anchorMin = new Vector2(0, 0.28f);
+            thumbRt.anchorMax = new Vector2(1, 1);
+            thumbRt.offsetMin = new Vector2(6, 6);
+            thumbRt.offsetMax = new Vector2(-6, -4);
             var rawImage = thumbGo.AddComponent<RawImage>();
             rawImage.raycastTarget = false;
-            var rt = PalettePreviewRenderer.GetPreview(def);
-            if (rt != null)
+            var preview = PalettePreviewRenderer.GetPreviewHandle(def);
+            if (preview?.Texture != null)
             {
-                rawImage.texture = rt;
+                rawImage.texture = preview.Texture;
             }
             else
             {
@@ -298,46 +347,24 @@ namespace StageMaker
             var labelRt = labelGo.GetComponent<RectTransform>();
             labelRt.SetParent(rowGo.transform, false);
             labelRt.anchorMin = new Vector2(0, 0);
-            labelRt.anchorMax = new Vector2(1, 1);
-            labelRt.offsetMin = new Vector2(80, 0);
-            labelRt.offsetMax = new Vector2(-8, 0);
+            labelRt.anchorMax = new Vector2(1, 0.27f);
+            labelRt.offsetMin = new Vector2(6, 0);
+            labelRt.offsetMax = new Vector2(-6, -2);
             var labelText = labelGo.AddComponent<Text>();
             labelText.font = StageMakerUIFactory.GetFont();
-            labelText.text = def.displayName;
-            labelText.fontSize = 18;
-            labelText.color = Color.white;
-            labelText.alignment = TextAnchor.MiddleLeft;
+            labelText.text = def.displayName.ToUpperInvariant();
+            labelText.fontSize = 15;
+            labelText.fontStyle = FontStyle.Bold;
+            labelText.color = StageMakerUIFactory.IceText;
+            labelText.alignment = TextAnchor.MiddleCenter;
             labelText.raycastTarget = false;
+            labelText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            labelText.resizeTextForBestFit = true;
+            labelText.resizeTextMinSize = 10;
+            labelText.resizeTextMaxSize = 18;
 
             var handler = rowGo.AddComponent<PaletteDragHandler>();
-            handler.Initialize(this, def.id);
-        }
-
-        private void BuildFooter()
-        {
-            var (clearGo, clearBtn, _) = StageMakerUIFactory.CreateButton(gameObject, "ClearAll",
-                "Clear All", new Color(0.45f, 0.20f, 0.20f, 1f), Color.white, new Vector2(160, 50));
-            var clearRt = clearGo.GetComponent<RectTransform>();
-            clearRt.anchorMin = new Vector2(0, 0);
-            clearRt.anchorMax = new Vector2(0, 0);
-            clearRt.anchoredPosition = new Vector2(120, 30);
-            clearBtn.onClick.AddListener(() =>
-            {
-                if (currentData != null) { currentData.parts.Clear(); }
-                RebuildScene();
-            });
-
-            // 操作説明
-            var hint = StageMakerUIFactory.CreateText(gameObject, "Hint",
-                "Drag from palette to place • Drag placed parts to move • Eraser then click to delete",
-                16, new Color(0.85f, 0.9f, 1f, 1f), TextAnchor.LowerCenter,
-                new Vector2(0, 0), new Vector2(1, 0));
-            var hintRt = (RectTransform)hint.transform;
-            hintRt.anchorMin = new Vector2(0, 0);
-            hintRt.anchorMax = new Vector2(1, 0);
-            hintRt.pivot = new Vector2(0.5f, 0);
-            hintRt.anchoredPosition = new Vector2(0, 8);
-            hintRt.sizeDelta = new Vector2(-300, 26);
+            handler.Initialize(this, def.id, thumbRt);
         }
 
         // ========== パレット選択 ==========
@@ -349,7 +376,7 @@ namespace StageMaker
             foreach (var kv in paletteSelectionFrame)
             {
                 kv.Value.color = (kv.Key == id)
-                    ? new Color(1, 1, 1, 0.55f)
+                    ? new Color(1, 1, 1, 0.16f)
                     : new Color(1, 1, 1, 0);
             }
         }
@@ -405,14 +432,14 @@ namespace StageMaker
         private void ConfigureCamera()
         {
             if (editorCamera == null) return;
-            editorCamera.transform.position = new Vector3(0f, 60f, 30f);
+            editorCamera.transform.position = new Vector3(StageCameraXOffset, 60f, 30f);
             editorCamera.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             editorCamera.orthographic = true;
             editorCamera.orthographicSize = 38f;
             editorCamera.nearClipPlane = 0.1f;
             editorCamera.farClipPlane = 200f;
             editorCamera.clearFlags = CameraClearFlags.SolidColor;
-            editorCamera.backgroundColor = new Color(0.07f, 0.10f, 0.20f, 1f);
+            editorCamera.backgroundColor = StageMakerUIFactory.TitleBlue;
             // パレットプレビュー用のレイヤー (30) はエディタカメラに映さない
             editorCamera.cullingMask &= ~(1 << 30);
         }
@@ -697,6 +724,12 @@ namespace StageMaker
 
         public bool TryRaycastGround(Vector3 screenPos, out Vector3 worldHit)
         {
+            if (IsScreenPointBlockedByUi(screenPos))
+            {
+                worldHit = Vector3.zero;
+                return false;
+            }
+
             if (editorCamera == null) editorCamera = Camera.main;
             if (editorCamera == null) { worldHit = Vector3.zero; return false; }
 
@@ -708,6 +741,19 @@ namespace StageMaker
             }
             worldHit = Vector3.zero;
             return false;
+        }
+
+        private bool IsScreenPointBlockedByUi(Vector3 screenPos)
+        {
+            if (EventSystem.current == null) { return false; }
+
+            var pointer = new PointerEventData(EventSystem.current)
+            {
+                position = screenPos
+            };
+            uiRaycastResults.Clear();
+            EventSystem.current.RaycastAll(pointer, uiRaycastResults);
+            return uiRaycastResults.Count > 0;
         }
 
         // ========== パレットドラッグ ==========
@@ -780,9 +826,12 @@ namespace StageMaker
 
         private DraggablePart currentDrag;
         private Vector3 currentDragGroundOffset;
+        private Vector3 currentDragStartMousePosition;
+        private bool currentDragMoved;
 
         // 画面ピクセル単位の判定半径
         private const float PartPickPixelRadius = 60f;
+        private const float DragStartPixelThreshold = 8f;
 
         private void Update()
         {
@@ -792,7 +841,7 @@ namespace StageMaker
             if (Input.GetMouseButtonDown(0))
             {
                 // UI の上 (パレット等) なら 3D 入力を無視
-                if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) { return; }
+                if (IsScreenPointBlockedByUi(Input.mousePosition)) { return; }
 
                 var part = FindPartUnderCursor(Input.mousePosition);
 
@@ -809,6 +858,8 @@ namespace StageMaker
                     {
                         currentDrag = part;
                         currentDragGroundOffset = part.transform.position - hitForDrag;
+                        currentDragStartMousePosition = Input.mousePosition;
+                        currentDragMoved = false;
                     }
                     return;
                 }
@@ -822,6 +873,13 @@ namespace StageMaker
             }
             else if (Input.GetMouseButton(0) && currentDrag != null)
             {
+                if (!currentDragMoved)
+                {
+                    float dragDistance = Vector2.Distance(Input.mousePosition, currentDragStartMousePosition);
+                    if (dragDistance < DragStartPixelThreshold) { return; }
+                    currentDragMoved = true;
+                }
+
                 if (TryRaycastGround(out Vector3 hit))
                 {
                     Vector3 newPos = hit + currentDragGroundOffset;
@@ -882,7 +940,16 @@ namespace StageMaker
             }
             else if (Input.GetMouseButtonUp(0))
             {
+                if (currentDrag != null
+                    && !currentDragMoved
+                    && !eraserMode
+                    && !string.IsNullOrEmpty(selectedPartId)
+                    && TryRaycastGround(out Vector3 placePos))
+                {
+                    PlacePartAt(selectedPartId, placePos);
+                }
                 currentDrag = null;
+                currentDragMoved = false;
             }
         }
 

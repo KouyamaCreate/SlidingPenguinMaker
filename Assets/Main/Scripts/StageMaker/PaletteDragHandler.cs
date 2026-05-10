@@ -7,17 +7,38 @@ namespace StageMaker
     /// パレット項目をドラッグして 3D シーンにパーツを配置するためのハンドラ。
     /// IBeginDragHandler / IDragHandler / IEndDragHandler を使用してドラッグ操作を受け取る。
     /// </summary>
-    public class PaletteDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
+    public class PaletteDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
         private StageMakerEditorView editor;
         private string partId;
+        private RectTransform hoverTarget;
         private GameObject ghost;
         private DraggablePart ghostDraggable;
+        private bool hovering;
 
-        public void Initialize(StageMakerEditorView e, string id)
+        public void Initialize(StageMakerEditorView e, string id, RectTransform hoverTargetOverride = null)
         {
             editor = e;
             partId = id;
+            hoverTarget = hoverTargetOverride;
+        }
+
+        private void Update()
+        {
+            if (hoverTarget == null || partId == StageMakerEditorView.EraserId) { return; }
+            float targetScale = hovering ? 1.12f : 1f;
+            hoverTarget.localScale = Vector3.Lerp(hoverTarget.localScale, Vector3.one * targetScale, Time.unscaledDeltaTime * 12f);
+            PalettePreviewRenderer.AnimatePreview(partId, hovering, Time.unscaledDeltaTime);
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            hovering = true;
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            hovering = false;
         }
 
         public void OnPointerClick(PointerEventData eventData)
@@ -33,18 +54,22 @@ namespace StageMaker
             if (partId == StageMakerEditorView.EraserId) return;
 
             editor.SelectPaletteItem(partId);
-            ghost = editor.SpawnGhostFromPalette(partId, eventData);
-            if (ghost != null)
-            {
-                ghostDraggable = ghost.GetComponent<DraggablePart>();
-            }
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (ghost == null) return;
             if (editor.TryRaycastGround(eventData.position, out Vector3 hitPoint))
             {
+                if (ghost == null)
+                {
+                    ghost = editor.SpawnGhostFromPalette(partId, eventData);
+                    if (ghost != null)
+                    {
+                        ghostDraggable = ghost.GetComponent<DraggablePart>();
+                    }
+                }
+                if (ghost == null) { return; }
+
                 Vector3 newPos = hitPoint + (ghostDraggable != null && ghostDraggable.definition != null
                     ? ghostDraggable.definition.spawnOffset
                     : Vector3.zero);
