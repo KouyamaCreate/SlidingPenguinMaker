@@ -4,6 +4,8 @@
 
 SlidingPenguin is a driving game of penguin.
 
+This repository (SlidingPenguinMaker), which is a fork project, includes the main SlidingPenguin game along with a stage maker feature that allows you to build and play stages immediately within the game. As I have made quite messy changes, I am not currently considering merging this into the original repository from the perspective of readability. However, if there are any changes made to the original project, I intend to actively incorporate them into this one.
+
 Control a penguin on ice and aim for the goal without falling into the sea.
 
 The stage is slippery and moves forward automatically. Use left, right, up, down movements and acceleration to control the penguin without ending the game.
