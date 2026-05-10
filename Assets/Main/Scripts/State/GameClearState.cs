@@ -10,11 +10,24 @@ public class GameClearState : IGameState
     {
         Debug.Log("Enter GameClearState");
 
+        // è©¦éŠãƒ¢ãƒ¼ãƒ‰: æ¼”å‡ºãƒ»çµæœãªã—ã§ã‚¹ãƒ†ãƒ¼ã‚¸åˆ¶ä½œç”»é¢ã«å³å¸°é‚„
+        if (StageGenerator.IsTestPlay)
+        {
+            StageGenerator.SetTestPlay(false);
+            context.PlayingCanvas.SetActive(false);
+            context.PauseCanvas.SetActive(false);
+            context.CountDownCanvas.SetActive(false);
+            context.GameOverCanvas.SetActive(false);
+            AudioManager.Instance.bgm.Stop();
+            SceneManager.LoadScene("StageMaker");
+            return;
+        }
+
         ScoreManager.Instance.SetCleared(true);
 
         if (!context.StageGenerator.IsSettingMode)
         {
-            // ƒƒO‚ÌƒXƒiƒbƒvƒVƒ‡ƒbƒg‚ğ‹L˜^ & ƒƒO‚ÌƒXƒgƒŠ[ƒ€‹L˜^‚ğI—¹ 
+            // ãƒ­ã‚°ã®ã‚¹ãƒŠãƒƒãƒ—ã‚·ãƒ§ãƒƒãƒˆã‚’è¨˜éŒ² & ãƒ­ã‚°ã®ã‚¹ãƒˆãƒªãƒ¼ãƒ è¨˜éŒ²ã‚’çµ‚äº†
             DataLogger.Instance.CaptureSnapshot();
             DataLogger.Instance.StopStream();
             DataLogger.Instance.EndTrial();

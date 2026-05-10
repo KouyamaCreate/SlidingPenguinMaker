@@ -128,7 +128,8 @@ namespace StageMaker
             float distance = dir.magnitude;
             if (distance < 0.01f) { distance = 1f; }
 
-            int count = Mathf.Clamp(Mathf.CeilToInt(distance / SpacingPerIce), 1, MaxIceCount);
+            // PingPong (往復) は 1 体が往来するだけなので、距離に関わらず常に 1 体のみ生成する
+            int count = surfacePingPong ? 1 : Mathf.Clamp(Mathf.CeilToInt(distance / SpacingPerIce), 1, MaxIceCount);
 
             var groupGo = new GameObject(def.id + "_Group");
             groupGo.transform.SetParent(parent, false);

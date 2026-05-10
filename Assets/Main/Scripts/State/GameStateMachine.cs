@@ -1,4 +1,7 @@
+using StageMaker;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 
 public class GameStateMachine : MonoBehaviour
@@ -41,9 +44,47 @@ public class GameStateMachine : MonoBehaviour
         CountDownCanvas = GameObject.Find("CountDownCanvas");
         GameOverCanvas = GameObject.Find("GameOverCanvas");
 
-        // Œ»İ‚ªSetting—p‚ÌƒV[ƒ“‚©‚Ç‚¤‚©‚Å‘JˆÚæ‚ğ•ªŠò
+        if (StageGenerator.IsTestPlay)
+        {
+            BuildTestPlayBackButton();
+        }
+
+        // ç¾åœ¨ã® Scene ãŒ Setting ç”¨ã‹ã©ã†ã‹ã§é·ç§»å…ˆã‚’åˆ†å²
         if (StageGenerator.IsSettingMode) { ChangeState(new GamePlayingState()); }
         else { ChangeState(new GameCourseIntroState()); }
+    }
+
+    private void BuildTestPlayBackButton()
+    {
+        var canvasGo = new GameObject("TestPlayOverlay");
+        var canvas = canvasGo.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 100;
+        canvasGo.AddComponent<GraphicRaycaster>();
+        var scaler = canvasGo.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        var (btnGo, btn, _) = StageMakerUIFactory.CreateButton(
+            canvasGo, "BackToEditorButton",
+            "< Back to Editor",
+            Color.white,
+            StageMakerUIFactory.IceText,
+            new Vector2(260f, 68f));
+
+        var rt = btnGo.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(16f, -16f);
+
+        btn.onClick.AddListener(() =>
+        {
+            StageGenerator.SetTestPlay(false);
+            AudioManager.Instance?.bgm.Stop();
+            SceneManager.LoadScene("StageMaker");
+        });
     }
 
     private void Update()
@@ -56,7 +97,7 @@ public class GameStateMachine : MonoBehaviour
 
     public void ChangeState(IGameState newState)
     {
-        // CurrentState‚ªnull‚Å‚È‚¢ê‡AExitƒƒ\ƒbƒh‚ğŒÄ‚Ño‚µ‚ÄŒ»İ‚Ìó‘Ô‚ğI—¹‚·‚é
+        // CurrentStateï¿½ï¿½nullï¿½Å‚È‚ï¿½ï¿½ê‡ï¿½AExitï¿½ï¿½ï¿½\ï¿½bï¿½hï¿½ï¿½ï¿½Ä‚Ñoï¿½ï¿½ï¿½ÄŒï¿½ï¿½İ‚Ìï¿½Ô‚ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if(stateStack.Count > 0)
         {
             stateStack.Peek().OnExit(this);

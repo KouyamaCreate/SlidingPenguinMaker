@@ -415,10 +415,19 @@ namespace StageMaker
             ground.transform.position = new Vector3(0, -0.05f, 35f);
             ground.transform.localScale = new Vector3(20f, 1f, 20f); // 200x200
             var groundRenderer = ground.GetComponent<MeshRenderer>();
-            // 既存マテリアルを複製してから変更 (共有マテリアル汚染を防ぐ)
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-            mat.color = new Color(0.20f, 0.45f, 0.65f, 1f);
-            groundRenderer.material = mat;
+            // InGame と同じ海面マテリアルを使用する
+            var seaMat = Resources.Load<Material>("StageMaker/Sea");
+            if (seaMat != null)
+            {
+                groundRenderer.material = seaMat;
+            }
+            else
+            {
+                // フォールバック: 海色の単色マテリアル
+                var mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+                mat.color = new Color(0.20f, 0.45f, 0.65f, 1f);
+                groundRenderer.material = mat;
+            }
 
             // パーツ親
             var partsGo = new GameObject("Parts");

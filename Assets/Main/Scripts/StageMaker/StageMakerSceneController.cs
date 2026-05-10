@@ -23,7 +23,37 @@ namespace StageMaker
         {
             EnsureEventSystem();
             BuildRootUI();
+            CreateSeaBackground();
+
+            // 試遊から戻った場合は編集していたステージの編集画面を直接開く
+            var returnId = StageGenerator.ReturnToEditStageId;
+            if (!string.IsNullOrEmpty(returnId))
+            {
+                StageGenerator.SetReturnToEditStageId(string.Empty);
+                var data = CustomStageRepository.Load(returnId);
+                if (data != null)
+                {
+                    EnterEditor(data);
+                    return;
+                }
+            }
+
             ShowList();
+        }
+
+        private void CreateSeaBackground()
+        {
+            var mat = Resources.Load<Material>("StageMaker/Sea");
+            if (mat == null) return;
+
+            var sea = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            sea.name = "StageMakerSea";
+            sea.transform.position = new Vector3(0f, -0.5f, 30f);
+            sea.transform.localScale = new Vector3(20f, 1f, 20f); // 200x200m でカメラ全域をカバー
+            sea.GetComponent<MeshRenderer>().material = mat;
+            // 判定不要なのでコライダーを除去
+            var col = sea.GetComponent<Collider>();
+            if (col != null) Destroy(col);
         }
 
         private void EnsureEventSystem()
@@ -101,6 +131,8 @@ namespace StageMaker
         {
             StageGenerator.SetStageType(StageType.Custom);
             StageGenerator.SetSelectedCustomStageId(stageId);
+            StageGenerator.SetTestPlay(true);
+            StageGenerator.SetReturnToEditStageId(stageId);
             LoadInGame();
         }
 

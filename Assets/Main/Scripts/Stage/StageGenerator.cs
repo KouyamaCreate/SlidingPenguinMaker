@@ -36,6 +36,22 @@ public class StageGenerator : MonoBehaviour
 
     private static bool isLatestSceneSettingMode; // 最後にプレイしたモードが本番用か設定用かを判別するための変数
 
+    /// <summary>
+    /// ステージ制作画面の PLAY ボタンから起動した試遊モードかどうか。
+    /// 試遊中はゴール後にリザルト画面を表示せず、ステージ制作画面に直帰する。
+    /// </summary>
+    private static bool isTestPlay = false;
+    public static bool IsTestPlay => isTestPlay;
+    public static void SetTestPlay(bool value) { isTestPlay = value; }
+
+    /// <summary>
+    /// 試遊から戻ったときに再開する編集中ステージの ID。
+    /// StageMakerSceneController が読み取り後にクリアする。
+    /// </summary>
+    private static string returnToEditStageId = string.Empty;
+    public static string ReturnToEditStageId => returnToEditStageId;
+    public static void SetReturnToEditStageId(string id) { returnToEditStageId = id ?? string.Empty; }
+
     private void Awake()
     {
         GenerateStage((int)stageType);
